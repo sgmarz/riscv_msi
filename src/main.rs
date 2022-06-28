@@ -3,6 +3,8 @@
 
 use core::arch::{asm, global_asm};
 
+// Include both assembly files and parse them as
+// assembly.
 global_asm!(include_str!("start.S"));
 global_asm!(include_str!("trap.S"));
 
@@ -46,6 +48,8 @@ fn abort() -> ! {
     }
 }
 
+
+// Control and Status Register macros to read/write CSRs
 #[macro_export]
 macro_rules! csr_write {
     ($csr: expr, $val: expr) => ( unsafe {
@@ -62,21 +66,34 @@ macro_rules! csr_read {
     })
 }
 
+// MAX_HARTS determines how many harts can run on this OS. If a HART is not permitted to
+// run, it will be sent to park and never be able to leave, hence turning it off.
 const MAX_HARTS: usize = 4;
+// Trap frames are used to store the 32 general purpose registers when a hart enters a
+// trap. 
 static mut TRAP_FRAMES: [[usize; 32]; MAX_HARTS] = [[0; 32]; MAX_HARTS];
 
+// Entry point from start.S
 #[no_mangle]
 fn main(hart: usize) {
+    // Make sure we have space for this HART
     if hart >= MAX_HARTS {
         return;
     }
+    // Let hart 0 be the bootstrap hart and set up UART
     if hart == 0 {
         console::uart_init();
     }
+    // Set the trap frame for this hart into the scratch register.
     csr_write!("mscratch", &TRAP_FRAMES[hart]);
+
+    // Setup the IMSIC and see what happens!
     println!("Booted on hart {}.", hart);
     imsic::imsic_init();
     println!("Done");
+    // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
+    // signals QEMU to exit. It literally is the exit() call, so many cleanups
+    // are not done.
     unsafe {
         core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
     }

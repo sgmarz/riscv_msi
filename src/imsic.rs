@@ -3,9 +3,26 @@
 use core::arch::asm;
 use crate::console::Uart;
 
-pub const IMSIC_M: usize = 0x2400_0000;
-pub const IMSIC_S: usize = 0x2800_0000;
+// There are two IMSICs per HART
+//   one for machine mode (M)
+//   one for supervisor mode (S)
+const IMSIC_M: usize = 0x2400_0000;
+const IMSIC_S: usize = 0x2800_0000;
 
+// Helper functions for determining MMIO address
+// for the messages. Each HART has an M and S mode
+// IMSIC. Each HART has its own IMSIC in its own page.
+const fn imsic_m(hart: usize) -> usize {
+    IMSIC_M + 0x1000 * hart
+}
+
+const fn imsic_s(hart: usize) -> usize {
+    IMSIC_S + 0x1000 * hart
+}
+
+// We only use XLEN for the EIE and EIP
+// since there are multiple registers based on the
+// interrupt number to enable or to set pending.
 const XLEN: usize = usize::BITS as usize;
 
 // M-mode
@@ -31,6 +48,11 @@ enum ImsicMode {
     Supervisor = 1,
 }
 
+// Currently, the CSRs for the IMSICs are not recognized by my
+// assembler. Luckily, we can specify any value for the CSR. If it
+// doesn't exist, we will get a trap #2 (illegal instruction).
+
+// Write to an IMSIC CSR
 fn imsic_write(reg: usize, val: usize) {
     unsafe {
         match reg {
@@ -51,6 +73,7 @@ fn imsic_write(reg: usize, val: usize) {
     }
 }
 
+// Read from an IMSIC CSR
 fn imsic_read(reg: usize) -> usize {
     let ret: usize;
     unsafe {
@@ -73,6 +96,7 @@ fn imsic_read(reg: usize) -> usize {
     ret
 }
 
+// Enable a message number
 fn imsic_enable(mode: ImsicMode, which: usize) {
     let eiebyte = EIE + which / XLEN;
     let bit = which % XLEN;
@@ -146,6 +170,7 @@ fn imsic_clear(mode: ImsicMode, which: usize) {
 }
 
 pub fn imsic_init() {
+    let hartid = csr_read!("mhartid");
     // First, enable the interrupt file
     // 0 = disabled
     // 1 = enabled
@@ -171,7 +196,7 @@ pub fn imsic_init() {
     // imsic_write!(csr::s::SETEIPNUM, 2);
     unsafe {
         // We are required to write only 32 bits.
-        core::ptr::write_volatile(IMSIC_M as *mut u32, 2)
+        core::ptr::write_volatile(imsic_m(hartid) as *mut u32, 2)
     }
     imsic_trigger(ImsicMode::Machine, 4);
 }
