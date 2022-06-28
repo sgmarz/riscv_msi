@@ -29,7 +29,6 @@ trap:
         loadgp %i
         .set i, i + 1
     .endr 
-    # j .
     mret
 .type trap, function
 .size trap, . - trap
