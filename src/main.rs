@@ -75,7 +75,6 @@ fn main(hart: usize) {
     }
     csr_write!("mscratch", &TRAP_FRAMES[hart]);
     println!("Booted on hart {}.", hart);
-    println!("  Frame @ 0x{:08x}", csr_read!("mscratch"));
     imsic::imsic_init();
     println!("Done");
     unsafe {
