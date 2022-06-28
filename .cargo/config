@@ -1,0 +1,11 @@
+[build]
+target = "riscv32i-unknown-none-elf"
+rustflags = ['-Clink-arg=-Tlds/virt.lds']
+
+[target.riscv32i-unknown-none-elf]
+runner = "./run.sh"
+
+[term]
+quiet = false
+verbose = true
+color = 'auto'
