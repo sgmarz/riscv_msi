@@ -1,9 +1,6 @@
 #![no_std]
 #![no_main]
-#[no_mangle]
-pub extern "C" fn rust_eh_register_frames() {}
-#[no_mangle]
-pub extern "C" fn rust_eh_unregister_frames() {}
+
 
 use core::arch::{asm, global_asm};
 
