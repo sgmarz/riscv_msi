@@ -25,19 +25,26 @@ const fn imsic_s(hart: usize) -> usize {
 // interrupt number to enable or to set pending.
 const XLEN: usize = usize::BITS as usize;
 
-// M-mode
+// The following are used as parameters to a match statement.
+// However, I chose to use the same number as their CSRs so
+// that if you need to cross-reference it, you have multiple
+// places to look.
+
+// M-mode IMSIC CSRs
 const MISELECT: usize = 0x350;
 const MIREG: usize = 0x351;
 const MTOPI: usize = 0xFB0;
 const MTOPEI: usize = 0x35C;
 
-// S-Mode
+// S-Mode IMSIC CSRs
 const SISELECT: usize = 0x150;
 const SIREG: usize = 0x151;
 const STOPI: usize = 0xDB0;
 const STOPEI: usize = 0x15C;
 
 // Constants for MISELECT/MIREG
+// Pass one of these into MISELECT
+// Then the MIREG will reflect that register
 const EIDELIVERY: usize = 0x70;
 const EITHRESHOLD: usize = 0x72;
 const EIP: usize = 0x80;
