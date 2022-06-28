@@ -47,10 +47,20 @@ const STOPEI: usize = 0x15C;
 // Then the MIREG will reflect that register
 const EIDELIVERY: usize = 0x70;
 const EITHRESHOLD: usize = 0x72;
+
+// For 32-bit, we have 0x80 for messages 0..31
+//                     0x81 for messages 32..63
+// and so forth.
+
+// For 64-bit, 0x80 covers 0x81 for messages 0..63
+// Referencing 0x81 or any other odd-numbered CSR will cause
+// an illegal instruction.
+
+// Same goes for EIP and EIE
 const EIP: usize = 0x80;
 const EIE: usize = 0xC0;
 
-enum ImsicMode {
+enum PrivMode {
     Machine = 0,
     Supervisor = 1,
 }
@@ -104,17 +114,17 @@ fn imsic_read(reg: usize) -> usize {
 }
 
 // Enable a message number
-fn imsic_enable(mode: ImsicMode, which: usize) {
+fn imsic_enable(mode: PrivMode, which: usize) {
     let eiebyte = EIE + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
-        ImsicMode::Machine => {
+        PrivMode::Machine => {
             imsic_write(MISELECT, eiebyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg | 1 << bit);
         }
-        ImsicMode::Supervisor => {
+        PrivMode::Supervisor => {
             imsic_write(SISELECT, eiebyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg | 1 << bit);
@@ -122,17 +132,17 @@ fn imsic_enable(mode: ImsicMode, which: usize) {
     };
 }
 
-fn imsic_disable(mode: ImsicMode, which: usize) {
+fn imsic_disable(mode: PrivMode, which: usize) {
     let iebyte = EIE + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
-        ImsicMode::Machine => {
+        PrivMode::Machine => {
             imsic_write(MISELECT, iebyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg & !(1 << bit));
         }
-        ImsicMode::Supervisor => {
+        PrivMode::Supervisor => {
             imsic_write(SISELECT, iebyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg & !(1 << bit));
@@ -140,17 +150,17 @@ fn imsic_disable(mode: ImsicMode, which: usize) {
     };
 }
 
-fn imsic_trigger(mode: ImsicMode, which: usize) {
+fn imsic_trigger(mode: PrivMode, which: usize) {
     let iebyte = EIP + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
-        ImsicMode::Machine => {
+        PrivMode::Machine => {
             imsic_write(MISELECT, iebyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg | 1 << bit);
         }
-        ImsicMode::Supervisor => {
+        PrivMode::Supervisor => {
             imsic_write(SISELECT, iebyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg | 1 << bit);
@@ -158,17 +168,17 @@ fn imsic_trigger(mode: ImsicMode, which: usize) {
     };
 }
 
-fn imsic_clear(mode: ImsicMode, which: usize) {
+fn imsic_clear(mode: PrivMode, which: usize) {
     let iebyte = EIP + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
-        ImsicMode::Machine => {
+        PrivMode::Machine => {
             imsic_write(MISELECT, iebyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg & !(1 << bit));
         }
-        ImsicMode::Supervisor => {
+        PrivMode::Supervisor => {
             imsic_write(SISELECT, iebyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg & !(1 << bit));
@@ -194,8 +204,8 @@ pub fn imsic_init() {
     imsic_write(MIREG, 5);
 
     // Enable message #10.
-    imsic_enable(ImsicMode::Machine, 2);
-    imsic_enable(ImsicMode::Machine, 4);
+    imsic_enable(PrivMode::Machine, 2);
+    imsic_enable(PrivMode::Machine, 4);
 
     // Trigger interrupt #2
     // SETEIPNUM no longer works
@@ -205,17 +215,17 @@ pub fn imsic_init() {
         // We are required to write only 32 bits.
         core::ptr::write_volatile(imsic_m(hartid) as *mut u32, 2)
     }
-    imsic_trigger(ImsicMode::Machine, 4);
+    imsic_trigger(PrivMode::Machine, 4);
 }
 
-fn imsic_pop(pr: ImsicMode) -> i32 {
+fn imsic_pop(pr: PrivMode) -> i32 {
     let ret: i32;
     unsafe {
         match pr {
             // MTOPEI
-            ImsicMode::Machine => asm!("csrrw {ret}, 0x35C, zero", ret = out(reg) ret),
+            PrivMode::Machine => asm!("csrrw {ret}, 0x35C, zero", ret = out(reg) ret),
             // STOPEI
-            ImsicMode::Supervisor => asm!("csrrw {ret}, 0x15C, zero", ret = out(reg) ret),
+            PrivMode::Supervisor => asm!("csrrw {ret}, 0x15C, zero", ret = out(reg) ret),
         }
     }
     // Lower 11 bits are the priority which is the same as the identity
@@ -223,7 +233,7 @@ fn imsic_pop(pr: ImsicMode) -> i32 {
 }
 
 pub fn imsic_handle() {
-    let v = imsic_pop(ImsicMode::Machine);
+    let v = imsic_pop(PrivMode::Machine);
     let mut u = Uart;
     match v {
         2 => println!("First test triggered by MMIO write successful!"),
