@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-
 use core::arch::{asm, global_asm};
 
 global_asm!(include_str!("start.S"));
@@ -30,7 +29,7 @@ macro_rules! println
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    print!("[SOS ABORT]: ");
+    print!("[ABORT]: ");
     if let Some(p) = info.location() {
         println!("line {}, file {}", p.line(), p.file());
     } else {
