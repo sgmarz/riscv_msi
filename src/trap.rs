@@ -1,6 +1,5 @@
 #[no_mangle]
 pub fn rust_trap() {
-    let mepc = csr_read!("mepc");
     let mcause = csr_read!("mcause");
     let interrupt = mcause >> 31 & 1 == 1;
 
@@ -10,7 +9,7 @@ pub fn rust_trap() {
             _ => println!("Interrupt {}", mcause),
         }
     } else {
-        println!("Exception {} @ 0x{:08x}: 0x{:08x}", mcause, mepc, csr_read!("mtval"));
+        println!("Exception {} @ 0x{:08x}: 0x{:08x}", mcause, csr_read!("mepc"), csr_read!("mtval"));
         crate::abort();
     }
 }
