@@ -78,6 +78,9 @@ fn main(hart: usize) {
     println!("  Frame @ 0x{:08x}", csr_read!("mscratch"));
     imsic::imsic_init();
     println!("Done");
+    unsafe {
+        core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
+    }
 }
 
 pub mod console;
