@@ -1,0 +1,206 @@
+#![allow(dead_code)]
+
+use core::arch::asm;
+use crate::console::Uart;
+
+pub const IMSIC_M: usize = 0x2400_0000;
+pub const IMSIC_S: usize = 0x2800_0000;
+
+const XLEN: usize = usize::BITS as usize;
+
+// M-mode
+const MISELECT: usize = 0x350;
+const MIREG: usize = 0x351;
+const MTOPI: usize = 0xFB0;
+const MTOPEI: usize = 0x35C;
+
+// S-Mode
+const SISELECT: usize = 0x150;
+const SIREG: usize = 0x151;
+const STOPI: usize = 0xDB0;
+const STOPEI: usize = 0x15C;
+
+// Constants for MISELECT/MIREG
+const EIDELIVERY: usize = 0x70;
+const EITHRESHOLD: usize = 0x72;
+const EIP: usize = 0x80;
+const EIE: usize = 0xC0;
+
+enum ImsicMode {
+    Machine = 0,
+    Supervisor = 1,
+}
+
+fn imsic_write(reg: usize, val: usize) {
+    unsafe {
+        match reg {
+            MISELECT => asm!("csrw 0x350, {val}", val = in(reg) val),
+            SISELECT => asm!("csrw 0x150, {val}", val = in(reg) val),
+
+            MIREG => asm!("csrw 0x351, {val}", val = in(reg) val),
+            SIREG => asm!("csrw 0x151, {val}", val = in(reg) val),
+
+            MTOPI => asm!("csrw 0xFB0, {val}", val = in(reg) val),
+            STOPI => asm!("csrw 0xDB0, {val}", val = in(reg) val),
+
+            MTOPEI => asm!("csrw 0x35C, {val}", val = in(reg) val),
+            STOPEI => asm!("csrw 0x15C, {val}", val = in(reg) val),
+
+            _ => panic!("Unknown CSR {}", reg)
+        }
+    }
+}
+
+fn imsic_read(reg: usize) -> usize {
+    let ret: usize;
+    unsafe {
+        match reg {
+            MISELECT => asm!("csrr {val}, 0x350", val = out(reg) ret),
+            SISELECT => asm!("csrr {val}, 0x150", val = out(reg) ret),
+
+            MIREG => asm!("csrr {val}, 0x351", val = out(reg) ret),
+            SIREG => asm!("csrr {val}, 0x151", val = out(reg) ret),
+
+            MTOPI => asm!("csrr {val}, 0xFB0", val = out(reg) ret),
+            STOPI => asm!("csrr {val}, 0xDB0", val = out(reg) ret),
+
+            MTOPEI => asm!("csrr {val}, 0x35C", val = out(reg) ret),
+            STOPEI => asm!("csrr {val}, 0x15C", val = out(reg) ret),
+
+            _ => panic!("Unknown CSR {}", reg)
+        }
+    }
+    ret
+}
+
+fn imsic_enable(mode: ImsicMode, which: usize) {
+    let eiebyte = EIE + which / XLEN;
+    let bit = which % XLEN;
+
+    match mode {
+        ImsicMode::Machine => {
+            imsic_write(MISELECT, eiebyte);
+            let reg = imsic_read(MIREG);
+            imsic_write(MIREG, reg | 1 << bit);
+        }
+        ImsicMode::Supervisor => {
+            imsic_write(SISELECT, eiebyte);
+            let reg = imsic_read(SIREG);
+            imsic_write(SIREG, reg | 1 << bit);
+        }
+    };
+}
+
+fn imsic_disable(mode: ImsicMode, which: usize) {
+    let iebyte = EIE + which / XLEN;
+    let bit = which % XLEN;
+
+    match mode {
+        ImsicMode::Machine => {
+            imsic_write(MISELECT, iebyte);
+            let reg = imsic_read(MIREG);
+            imsic_write(MIREG, reg & !(1 << bit));
+        }
+        ImsicMode::Supervisor => {
+            imsic_write(SISELECT, iebyte);
+            let reg = imsic_read(SIREG);
+            imsic_write(SIREG, reg & !(1 << bit));
+        }
+    };
+}
+
+fn imsic_trigger(mode: ImsicMode, which: usize) {
+    let iebyte = EIP + which / XLEN;
+    let bit = which % XLEN;
+
+    match mode {
+        ImsicMode::Machine => {
+            imsic_write(MISELECT, iebyte);
+            let reg = imsic_read(MIREG);
+            imsic_write(MIREG, reg | 1 << bit);
+        }
+        ImsicMode::Supervisor => {
+            imsic_write(SISELECT, iebyte);
+            let reg = imsic_read(SIREG);
+            imsic_write(SIREG, reg | 1 << bit);
+        }
+    };
+}
+
+fn imsic_clear(mode: ImsicMode, which: usize) {
+    let iebyte = EIP + which / XLEN;
+    let bit = which % XLEN;
+
+    match mode {
+        ImsicMode::Machine => {
+            imsic_write(MISELECT, iebyte);
+            let reg = imsic_read(MIREG);
+            imsic_write(MIREG, reg & !(1 << bit));
+        }
+        ImsicMode::Supervisor => {
+            imsic_write(SISELECT, iebyte);
+            let reg = imsic_read(SIREG);
+            imsic_write(SIREG, reg & !(1 << bit));
+        }
+    };
+}
+
+pub fn imsic_init() {
+    // First, enable the interrupt file
+    // 0 = disabled
+    // 1 = enabled
+    // 0x4000_0000 = use PLIC instead
+    imsic_write(MISELECT, EIDELIVERY);
+    imsic_write(MIREG, 1);
+
+    // Set the interrupt threshold.
+    // 0 = enable all interrupts
+    // P = enable < P only
+    // Priorities come from the interrupt number directly
+    imsic_write(MISELECT, EITHRESHOLD);
+    // Only hear 0, 1, 2, 3, and 4
+    imsic_write(MIREG, 5);
+
+    // Enable message #10.
+    imsic_enable(ImsicMode::Machine, 2);
+    imsic_enable(ImsicMode::Machine, 4);
+
+    // Trigger interrupt #2
+    // SETEIPNUM no longer works
+    // This can be done via SETEIPNUM CSR or via MMIO
+    // imsic_write!(csr::s::SETEIPNUM, 2);
+    unsafe {
+        // We are required to write only 32 bits.
+        core::ptr::write_volatile(IMSIC_M as *mut u32, 2)
+    }
+    imsic_trigger(ImsicMode::Machine, 4);
+}
+
+fn imsic_pop(pr: ImsicMode) -> i32 {
+    let ret: i32;
+    unsafe {
+        match pr {
+            // MTOPEI
+            ImsicMode::Machine => asm!("csrrw {ret}, 0x35C, zero", ret = out(reg) ret),
+            // STOPEI
+            ImsicMode::Supervisor => asm!("csrrw {ret}, 0x15C, zero", ret = out(reg) ret),
+        }
+    }
+    // Lower 11 bits are the priority which is the same as the identity
+    ret & 0x7FF
+}
+
+pub fn imsic_handle() {
+    let v = imsic_pop(ImsicMode::Machine);
+    let mut u = Uart;
+    match v {
+        2 => println!("First test triggered by MMIO write successful!"),
+        4 => println!("Second test triggered by EIP successful!"),
+        10 => {
+            if let Some(c) = u.read_char() {
+                print!("{}", c as char);
+            }
+        }
+        _ => println!("Unknown msi #{}", v),
+    }
+}
