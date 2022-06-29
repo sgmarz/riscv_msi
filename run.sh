@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then
+if [ $# -ne 1 -o ! -x $1 ]; then
     echo "Use cargo run instead of running this directly."
     exit 2
 fi
