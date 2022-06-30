@@ -235,6 +235,7 @@ fn imsic_pop(pr: PrivMode) -> i32 {
     ret & 0x7FF
 }
 
+/// Handle an IMSIC trap. Called from `trap::rust_trap`
 pub fn imsic_handle() {
     let v = imsic_pop(PrivMode::Machine);
     let mut u = Uart;

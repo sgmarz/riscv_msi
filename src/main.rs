@@ -77,6 +77,7 @@ static mut TRAP_FRAMES: [[usize; 32]; MAX_HARTS] = [[0; 32]; MAX_HARTS];
 fn main(hart: usize) {
     // Make sure we have space for this HART
     if hart >= MAX_HARTS {
+        // We don't, send it to park
         return;
     }
     // Let hart 0 be the bootstrap hart and set up UART
