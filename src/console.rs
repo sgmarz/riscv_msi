@@ -52,4 +52,6 @@ impl Write for Uart {
     }
 }
 
-
+pub fn run() {
+    print!("Type something> ");
+}

@@ -89,7 +89,7 @@ fn main(hart: usize) {
         println!("Booted on hart {}.", hart);
         imsic::imsic_init();
         aplic::aplic_init();
-        println!("Done");
+        console::run();
 
         // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
         // signals QEMU to exit. It literally is the exit() call, so many cleanups
