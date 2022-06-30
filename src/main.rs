@@ -80,22 +80,21 @@ fn main(hart: usize) {
         // We don't, send it to park
         return;
     }
+    // Set the trap frame for this hart into the scratch register.
+    csr_write!("mscratch", &TRAP_FRAMES[hart]);
     // Let hart 0 be the bootstrap hart and set up UART
     if hart == 0 {
         console::uart_init();
-    }
-    // Set the trap frame for this hart into the scratch register.
-    csr_write!("mscratch", &TRAP_FRAMES[hart]);
-
-    // Setup the IMSIC and see what happens!
-    println!("Booted on hart {}.", hart);
-    imsic::imsic_init();
-    println!("Done");
-    // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
-    // signals QEMU to exit. It literally is the exit() call, so many cleanups
-    // are not done.
-    unsafe {
-        core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
+        // Setup the IMSIC and see what happens!
+        println!("Booted on hart {}.", hart);
+        imsic::imsic_init();
+        println!("Done");
+        // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
+        // signals QEMU to exit. It literally is the exit() call, so many cleanups
+        // are not done.
+        unsafe {
+            core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
+        }
     }
 }
 

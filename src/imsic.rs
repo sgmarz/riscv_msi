@@ -2,6 +2,7 @@
 
 use crate::console::Uart;
 use core::arch::asm;
+use core::ptr::write_volatile;
 
 // Each hart is a page away from each other (4096 bytes or 0x1000)
 const IMSIC_HART_STRIDE: usize = 0x1000;
@@ -136,17 +137,17 @@ fn imsic_enable(mode: PrivMode, which: usize) {
 }
 
 fn imsic_disable(mode: PrivMode, which: usize) {
-    let iebyte = EIE + which / XLEN;
+    let eiebyte = EIE + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
         PrivMode::Machine => {
-            imsic_write(MISELECT, iebyte);
+            imsic_write(MISELECT, eiebyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg & !(1 << bit));
         }
         PrivMode::Supervisor => {
-            imsic_write(SISELECT, iebyte);
+            imsic_write(SISELECT, eiebyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg & !(1 << bit));
         }
@@ -154,17 +155,17 @@ fn imsic_disable(mode: PrivMode, which: usize) {
 }
 
 fn imsic_trigger(mode: PrivMode, which: usize) {
-    let iebyte = EIP + which / XLEN;
+    let eipbyte = EIP + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
         PrivMode::Machine => {
-            imsic_write(MISELECT, iebyte);
+            imsic_write(MISELECT, eipbyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg | 1 << bit);
         }
         PrivMode::Supervisor => {
-            imsic_write(SISELECT, iebyte);
+            imsic_write(SISELECT, eipbyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg | 1 << bit);
         }
@@ -172,17 +173,17 @@ fn imsic_trigger(mode: PrivMode, which: usize) {
 }
 
 fn imsic_clear(mode: PrivMode, which: usize) {
-    let iebyte = EIP + which / XLEN;
+    let eipbyte = EIP + which / XLEN;
     let bit = which % XLEN;
 
     match mode {
         PrivMode::Machine => {
-            imsic_write(MISELECT, iebyte);
+            imsic_write(MISELECT, eipbyte);
             let reg = imsic_read(MIREG);
             imsic_write(MIREG, reg & !(1 << bit));
         }
         PrivMode::Supervisor => {
-            imsic_write(SISELECT, iebyte);
+            imsic_write(SISELECT, eipbyte);
             let reg = imsic_read(SIREG);
             imsic_write(SIREG, reg & !(1 << bit));
         }
@@ -206,9 +207,11 @@ pub fn imsic_init() {
     // Only hear 0, 1, 2, 3, and 4
     imsic_write(MIREG, 5);
 
-    // Enable message #10.
+    // Enable message #10. This will be UART when delegated by the
+    // APLIC.
     imsic_enable(PrivMode::Machine, 2);
     imsic_enable(PrivMode::Machine, 4);
+    imsic_enable(PrivMode::Machine, 10);
 
     // Trigger interrupt #2
     // SETEIPNUM no longer works
@@ -216,7 +219,7 @@ pub fn imsic_init() {
     // imsic_write!(csr::s::SETEIPNUM, 2);
     unsafe {
         // We are required to write only 32 bits.
-        core::ptr::write_volatile(imsic_m(hartid) as *mut u32, 2)
+        write_volatile(imsic_m(hartid) as *mut u32, 2)
     }
     imsic_trigger(PrivMode::Machine, 4);
 }

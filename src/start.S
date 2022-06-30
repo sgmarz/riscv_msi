@@ -12,8 +12,11 @@ _start:
     slli    t0, a0, 13
     sub     sp, sp, t0
 
+    # Set the trap vector to trap (defined in trap.S)
     la      t0, trap
     csrw    mtvec, t0
+
+    # Jump to main after mret
     la      t0, main
     csrw    mepc, t0
     # 3 << 11 is Mode 3 in MPP (Machine Mode)
@@ -26,6 +29,7 @@ _start:
     li      t0, (1 << 11) | (1 << 9)
     csrw    mie, t0
 
+    # When main returns, we want to park the HART
     la      ra, park
     mret
 .type _start, function
