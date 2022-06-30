@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use core::arch::asm;
 use crate::console::Uart;
+use core::arch::asm;
 
 // Each hart is a page away from each other (4096 bytes or 0x1000)
 const IMSIC_HART_STRIDE: usize = 0x1000;
@@ -88,7 +88,7 @@ fn imsic_write(reg: usize, val: usize) {
             MTOPEI => asm!("csrw 0x35C, {val}", val = in(reg) val),
             STOPEI => asm!("csrw 0x15C, {val}", val = in(reg) val),
 
-            _ => panic!("Unknown CSR {}", reg)
+            _ => panic!("Unknown CSR {}", reg),
         }
     }
 }
@@ -110,7 +110,7 @@ fn imsic_read(reg: usize) -> usize {
             MTOPEI => asm!("csrr {val}, 0x35C", val = out(reg) ret),
             STOPEI => asm!("csrr {val}, 0x15C", val = out(reg) ret),
 
-            _ => panic!("Unknown CSR {}", reg)
+            _ => panic!("Unknown CSR {}", reg),
         }
     }
     ret

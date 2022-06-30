@@ -48,7 +48,6 @@ fn abort() -> ! {
     }
 }
 
-
 // Control and Status Register macros to read/write CSRs
 #[macro_export]
 macro_rules! csr_write {
@@ -70,7 +69,7 @@ macro_rules! csr_read {
 // run, it will be sent to park and never be able to leave, hence turning it off.
 const MAX_HARTS: usize = 4;
 // Trap frames are used to store the 32 general purpose registers when a hart enters a
-// trap. 
+// trap.
 static mut TRAP_FRAMES: [[usize; 32]; MAX_HARTS] = [[0; 32]; MAX_HARTS];
 
 // Entry point from start.S
