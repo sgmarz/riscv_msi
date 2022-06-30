@@ -29,6 +29,8 @@ _start:
     li      t0, (1 << 11) | (1 << 9)
     csrw    mie, t0
 
+    csrw    mideleg, 0
+
     # When main returns, we want to park the HART
     la      ra, park
     mret

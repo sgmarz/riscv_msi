@@ -10,8 +10,8 @@ const IMSIC_HART_STRIDE: usize = 0x1000;
 // There are two IMSICs per HART
 //   one for machine mode (M)
 //   one for supervisor mode (S)
-const IMSIC_M: usize = 0x2400_0000;
-const IMSIC_S: usize = 0x2800_0000;
+pub const IMSIC_M: usize = 0x2400_0000;
+pub const IMSIC_S: usize = 0x2800_0000;
 
 // Helper functions for determining MMIO address
 // for the messages. Each HART has an M and S mode
@@ -199,6 +199,9 @@ pub fn imsic_init() {
     imsic_write(MISELECT, EIDELIVERY);
     imsic_write(MIREG, 1);
 
+    imsic_write(SISELECT, EIDELIVERY);
+    imsic_write(SIREG, 1);
+
     // Set the interrupt threshold.
     // 0 = enable all interrupts
     // P = enable < P only
@@ -207,11 +210,15 @@ pub fn imsic_init() {
     // Only hear 0, 1, 2, 3, and 4
     imsic_write(MIREG, 5);
 
+    // Hear message 10
+    imsic_write(SISELECT, EITHRESHOLD);
+    imsic_write(SIREG, 11);
+
     // Enable message #10. This will be UART when delegated by the
     // APLIC.
     imsic_enable(PrivMode::Machine, 2);
     imsic_enable(PrivMode::Machine, 4);
-    imsic_enable(PrivMode::Machine, 10);
+    imsic_enable(PrivMode::Supervisor, 10);
 
     // Trigger interrupt #2
     // SETEIPNUM no longer works

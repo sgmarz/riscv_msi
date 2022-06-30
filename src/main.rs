@@ -88,16 +88,21 @@ fn main(hart: usize) {
         // Setup the IMSIC and see what happens!
         println!("Booted on hart {}.", hart);
         imsic::imsic_init();
+        aplic::aplic_init();
         println!("Done");
+
         // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
         // signals QEMU to exit. It literally is the exit() call, so many cleanups
         // are not done.
-        unsafe {
-            core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
-        }
+        // Remove the following that quits QEMU. Now that we have APLIC and UART,
+        // we can talk to it.
+        // unsafe {
+            // core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
+        // }
     }
 }
 
+pub mod aplic;
 pub mod console;
 pub mod imsic;
 pub mod trap;

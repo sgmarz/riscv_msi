@@ -1,4 +1,4 @@
-use crate::imsic::PrivMode;
+use crate::{abort, imsic::PrivMode};
 
 #[no_mangle]
 pub fn rust_trap() {
@@ -14,7 +14,6 @@ pub fn rust_trap() {
         }
     } else {
         // Exception (synchronous)
-        println!("Exception {} @ 0x{:08x}: 0x{:08x}", mcause, csr_read!("mepc"), csr_read!("mtval"));
-        crate::abort();
+        panic!("Exception {} @ 0x{:08x}: 0x{:08x}", mcause, csr_read!("mepc"), csr_read!("mtval"));
     }
 }
