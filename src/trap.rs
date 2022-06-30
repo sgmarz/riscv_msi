@@ -1,3 +1,5 @@
+use crate::imsic::PrivMode;
+
 #[no_mangle]
 pub fn rust_trap() {
     let mcause = csr_read!("mcause");
@@ -6,7 +8,8 @@ pub fn rust_trap() {
     if interrupt {
         // Interrupt (asynchronous)
         match mcause & 0xFF {
-            11 => crate::imsic::imsic_handle(),
+            9 => crate::imsic::imsic_handle(PrivMode::Supervisor),
+            11 => crate::imsic::imsic_handle(PrivMode::Machine),
             _ => println!("Interrupt {}", mcause),
         }
     } else {

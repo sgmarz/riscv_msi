@@ -63,7 +63,7 @@ const EITHRESHOLD: usize = 0x72;
 const EIP: usize = 0x80;
 const EIE: usize = 0xC0;
 
-enum PrivMode {
+pub enum PrivMode {
     Machine = 0,
     Supervisor = 1,
 }
@@ -236,8 +236,8 @@ fn imsic_pop(pr: PrivMode) -> i32 {
 }
 
 /// Handle an IMSIC trap. Called from `trap::rust_trap`
-pub fn imsic_handle() {
-    let v = imsic_pop(PrivMode::Machine);
+pub fn imsic_handle(pm: PrivMode) {
+    let v = imsic_pop(pm);
     let mut u = Uart;
     match v {
         2 => println!("First test triggered by MMIO write successful!"),
