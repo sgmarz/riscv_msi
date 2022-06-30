@@ -16,9 +16,14 @@ _start:
     csrw    mtvec, t0
     la      t0, main
     csrw    mepc, t0
+    # 3 << 11 is Mode 3 in MPP (Machine Mode)
+    # 1 << 7  is MPIE to turn on interrupts
     li      t0, (3 << 11) | (1 << 7)
     csrw    mstatus, t0
-    li      t0, (1 << 11)
+
+    # 1 << 11 is MEIE to enable external interrupts (Machine)
+    # 1 << 9  is SEIE to enable external interrupts (Supervisor)
+    li      t0, (1 << 11) | (1 << 9)
     csrw    mie, t0
 
     la      ra, park
