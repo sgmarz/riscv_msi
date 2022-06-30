@@ -224,8 +224,8 @@ pub fn imsic_init() {
     imsic_trigger(PrivMode::Machine, 4);
 }
 
-fn imsic_pop(pr: PrivMode) -> i32 {
-    let ret: i32;
+fn imsic_pop(pr: PrivMode) -> u32 {
+    let ret: u32;
     unsafe {
         match pr {
             // MTOPEI
@@ -234,8 +234,8 @@ fn imsic_pop(pr: PrivMode) -> i32 {
             PrivMode::Supervisor => asm!("csrrw {ret}, 0x15C, zero", ret = out(reg) ret),
         }
     }
-    // Lower 11 bits are the priority which is the same as the identity
-    ret & 0x7FF
+    // I originally had ret & 0x7FF, but the specification recommends ret >> 16
+    ret >> 16
 }
 
 /// Handle an IMSIC trap. Called from `trap::rust_trap`
