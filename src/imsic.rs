@@ -3,6 +3,9 @@
 use core::arch::asm;
 use crate::console::Uart;
 
+// Each hart is a page away from each other (4096 bytes or 0x1000)
+const IMSIC_HART_STRIDE: usize = 0x1000;
+
 // There are two IMSICs per HART
 //   one for machine mode (M)
 //   one for supervisor mode (S)
@@ -13,11 +16,11 @@ const IMSIC_S: usize = 0x2800_0000;
 // for the messages. Each HART has an M and S mode
 // IMSIC. Each HART has its own IMSIC in its own page.
 const fn imsic_m(hart: usize) -> usize {
-    IMSIC_M + 0x1000 * hart
+    IMSIC_M + IMSIC_HART_STRIDE * hart
 }
 
 const fn imsic_s(hart: usize) -> usize {
-    IMSIC_S + 0x1000 * hart
+    IMSIC_S + IMSIC_HART_STRIDE * hart
 }
 
 // We only use XLEN for the EIE and EIP
