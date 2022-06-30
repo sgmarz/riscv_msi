@@ -1,4 +1,4 @@
-use crate::{abort, imsic::PrivMode};
+use crate::imsic::PrivMode;
 
 #[no_mangle]
 pub fn rust_trap() {
