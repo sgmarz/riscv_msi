@@ -28,6 +28,7 @@ const fn imsic_s(hart: usize) -> usize {
 // since there are multiple registers based on the
 // interrupt number to enable or to set pending.
 const XLEN: usize = usize::BITS as usize;
+const XLEN_STRIDE: usize = XLEN / 32;
 
 // The following are used as parameters to a match statement.
 // However, I chose to use the same number as their CSRs so
@@ -119,7 +120,7 @@ fn imsic_read(reg: usize) -> usize {
 
 // Enable a message number
 fn imsic_enable(mode: PrivMode, which: usize) {
-    let eiebyte = EIE + which / XLEN;
+    let eiebyte = EIE + XLEN_STRIDE * which / XLEN;
     let bit = which % XLEN;
 
     match mode {
@@ -137,7 +138,7 @@ fn imsic_enable(mode: PrivMode, which: usize) {
 }
 
 fn imsic_disable(mode: PrivMode, which: usize) {
-    let eiebyte = EIE + which / XLEN;
+    let eiebyte = EIE + XLEN_STRIDE * which / XLEN;
     let bit = which % XLEN;
 
     match mode {
@@ -155,7 +156,7 @@ fn imsic_disable(mode: PrivMode, which: usize) {
 }
 
 fn imsic_trigger(mode: PrivMode, which: usize) {
-    let eipbyte = EIP + which / XLEN;
+    let eipbyte = EIP + XLEN_STRIDE * which / XLEN;
     let bit = which % XLEN;
 
     match mode {
@@ -173,7 +174,7 @@ fn imsic_trigger(mode: PrivMode, which: usize) {
 }
 
 fn imsic_clear(mode: PrivMode, which: usize) {
-    let eipbyte = EIP + which / XLEN;
+    let eipbyte = EIP + XLEN_STRIDE * which / XLEN;
     let bit = which % XLEN;
 
     match mode {
