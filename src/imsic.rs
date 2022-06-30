@@ -240,9 +240,10 @@ fn imsic_pop(pr: PrivMode) -> u32 {
 
 /// Handle an IMSIC trap. Called from `trap::rust_trap`
 pub fn imsic_handle(pm: PrivMode) {
-    let v = imsic_pop(pm);
+    let msgnum = imsic_pop(pm);
     let mut u = Uart;
-    match v {
+    match msgnum {
+        0 => println!("Spurious 'no' message."),
         2 => println!("First test triggered by MMIO write successful!"),
         4 => println!("Second test triggered by EIP successful!"),
         10 => {
@@ -250,6 +251,6 @@ pub fn imsic_handle(pm: PrivMode) {
                 print!("{}", c as char);
             }
         }
-        _ => println!("Unknown msi #{}", v),
+        _ => println!("Unknown msi #{}", msgnum),
     }
 }
