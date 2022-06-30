@@ -2,6 +2,10 @@
 
 Testing the new MSIs added by the draft Advanced Interrupt Architecture (AIA) specification.
 
+# Blog Posts
+
+First blog post: [30-June-2022](https://blog.stephenmarz.com/2022/06/30/riscv-imsic/)
+
 # Quick Emulator (QEMU)
 
 The MSI controller has been added to the `virt` machine to QEMU. This may require you to upgrade your QEMU.
