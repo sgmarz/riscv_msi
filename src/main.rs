@@ -105,4 +105,5 @@ fn main(hart: usize) {
 pub mod aplic;
 pub mod console;
 pub mod imsic;
+pub mod ringbuffer;
 pub mod trap;

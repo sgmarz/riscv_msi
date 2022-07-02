@@ -1,5 +1,6 @@
 use core::fmt::{Result, Write};
 use core::ptr::{read_volatile, write_volatile};
+use crate::ringbuffer::{RingBuffer, RING_BUFFER_SIZE};
 
 const UART_BASE: usize = 0x1000_0000;
 const UART_THR: usize = 0;
@@ -51,50 +52,6 @@ impl Write for Uart {
     }
 }
 
-const RING_BUFFER_SIZE: usize = 32;
-
-#[derive(Default)]
-struct RingBuffer {
-    m_buffer: [u8; RING_BUFFER_SIZE],
-    m_start: usize,
-    m_size: usize
-}
-
-
-impl RingBuffer {
-    pub const fn new() -> Self {
-        Self {
-            m_buffer: [0; RING_BUFFER_SIZE], 
-            m_start: 0, 
-            m_size: 0 
-        }
-    }
-    pub fn max_size(&self) -> usize {
-        self.m_buffer.len()
-    }
-
-    pub fn push(&mut self, c: u8) -> bool {
-        if self.m_size + 1 >= self.max_size() {
-            false
-        }
-        else {
-            self.m_buffer[(self.m_start + self.m_size) % self.max_size()] = c;
-            self.m_size += 1;
-            true
-        }
-    }
-    pub fn pop(&mut self) -> Option<u8> {
-        if self.m_size == 0 {
-            None
-        }
-        else {
-            let c = self.m_buffer[self.m_start];
-            self.m_size -= 1;
-            self.m_start = (self.m_start + 1) % self.max_size();
-            Some(c)
-        }
-    }
-}
 
 static mut CONSOLE_BUFFER: RingBuffer = RingBuffer::new();
 
@@ -134,7 +91,7 @@ fn runcmd(buffer: &[u8]) {
     }
     else if strequals(buffer, b"help") {
         println!("Commands: ");
-        println!(" quit - Quit");
+        println!("  quit - Quit");
     }
     else {
         println!("Command not found.");
@@ -167,9 +124,11 @@ pub fn run() {
                 print!("{}", c);
             }
             else {
-                buffer[typed] = c;
-                typed += 1;
-                print!("{}", c_as_char)
+                if typed + 1 < buffer.len() {
+                    buffer[typed] = c;
+                    typed += 1;
+                    print!("{}", c_as_char)
+                }
             }
         }
         else {
