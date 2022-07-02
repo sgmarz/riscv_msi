@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::console::Uart;
+use crate::console::console_irq;
 use core::arch::asm;
 use core::ptr::write_volatile;
 
@@ -249,16 +249,11 @@ fn imsic_pop(pr: PrivMode) -> u32 {
 /// Handle an IMSIC trap. Called from `trap::rust_trap`
 pub fn imsic_handle(pm: PrivMode) {
     let msgnum = imsic_pop(pm);
-    let mut u = Uart;
     match msgnum {
         0 => println!("Spurious 'no' message."),
         2 => println!("First test triggered by MMIO write successful!"),
         4 => println!("Second test triggered by EIP successful!"),
-        10 => {
-            if let Some(c) = u.read_char() {
-                print!("{}", c as char);
-            }
-        }
+        10 => console_irq(),
         _ => println!("Unknown msi #{}", msgnum),
     }
 }

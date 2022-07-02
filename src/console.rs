@@ -1,6 +1,5 @@
 use core::fmt::{Result, Write};
 use core::ptr::{read_volatile, write_volatile};
-// use crate::lock::Mutex;
 
 const UART_BASE: usize = 0x1000_0000;
 const UART_THR: usize = 0;
@@ -52,6 +51,133 @@ impl Write for Uart {
     }
 }
 
-pub fn run() {
-    print!("Type something> ");
+const RING_BUFFER_SIZE: usize = 32;
+
+#[derive(Default)]
+struct RingBuffer {
+    m_buffer: [u8; RING_BUFFER_SIZE],
+    m_start: usize,
+    m_size: usize
 }
+
+
+impl RingBuffer {
+    pub const fn new() -> Self {
+        Self {
+            m_buffer: [0; RING_BUFFER_SIZE], 
+            m_start: 0, 
+            m_size: 0 
+        }
+    }
+    pub fn max_size(&self) -> usize {
+        self.m_buffer.len()
+    }
+
+    pub fn push(&mut self, c: u8) -> bool {
+        if self.m_size + 1 >= self.max_size() {
+            false
+        }
+        else {
+            self.m_buffer[(self.m_start + self.m_size) % self.max_size()] = c;
+            self.m_size += 1;
+            true
+        }
+    }
+    pub fn pop(&mut self) -> Option<u8> {
+        if self.m_size == 0 {
+            None
+        }
+        else {
+            let c = self.m_buffer[self.m_start];
+            self.m_size -= 1;
+            self.m_start = (self.m_start + 1) % self.max_size();
+            Some(c)
+        }
+    }
+}
+
+static mut CONSOLE_BUFFER: RingBuffer = RingBuffer::new();
+
+pub fn console_irq() {
+    if uart_read(UART_LSR) & 1 == 1 {
+        unsafe {
+            CONSOLE_BUFFER.push(uart_read(UART_RBR));
+        }
+    }
+}
+
+fn prompt() {
+    print!("\n> ");
+}
+
+fn strequals(left: &[u8], right: &[u8]) -> bool {
+    if left.len() < right.len() {
+        return false;
+    }
+    for i in 0..right.len() {
+        if left[i] != right[i] {
+            return false;
+        }
+        else if left[i] == 0 {
+            return true;
+        }
+    }
+    return true;
+}
+
+fn runcmd(buffer: &[u8]) {
+    if strequals(buffer, b"quit") {
+        println!("Quitting...");
+        unsafe {
+            write_volatile(0x10_0000 as *mut u16, 0x5555);
+        }
+    }
+    else if strequals(buffer, b"help") {
+        println!("Commands: ");
+        println!(" quit - Quit");
+    }
+    else {
+        println!("Command not found.");
+    }
+}
+
+pub fn run() {
+    let mut typed: usize = 0;
+    let mut buffer: [u8; RING_BUFFER_SIZE] = [0; RING_BUFFER_SIZE];
+    prompt();
+    loop {
+        if let Some(c) = unsafe { CONSOLE_BUFFER.pop() } {
+            let c_as_char = c as char;
+            if c == 10 || c == 13 {
+                buffer[typed] = 0;
+                println!();
+                if typed > 0 {
+                    runcmd(&buffer);
+                }
+                prompt();
+                typed = 0;
+            }
+            else if c == 127 {
+                if typed > 0 {
+                    print!("\x08 \x08");
+                    typed -= 1;
+                }
+            }
+            else if c < 20 {
+                print!("{}", c);
+            }
+            else {
+                buffer[typed] = c;
+                typed += 1;
+                print!("{}", c_as_char)
+            }
+        }
+        else {
+            unsafe {
+                core::arch::asm!("wfi");
+            }
+        }
+    }
+}
+
+
