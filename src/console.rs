@@ -123,12 +123,10 @@ pub fn run() {
             else if c < 20 {
                 print!("{}", c);
             }
-            else {
-                if typed + 1 < buffer.len() {
-                    buffer[typed] = c;
-                    typed += 1;
-                    print!("{}", c_as_char)
-                }
+            else if typed + 1 < buffer.len() {
+                buffer[typed] = c;
+                typed += 1;
+                print!("{}", c_as_char)
             }
         }
         else {
