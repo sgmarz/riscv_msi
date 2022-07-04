@@ -89,6 +89,7 @@ fn main(hart: usize) {
         println!("Booted on hart {}.", hart);
         imsic::imsic_init();
         aplic::aplic_init();
+        pci::pci_init();
         console::run();
 
         // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
@@ -105,5 +106,6 @@ fn main(hart: usize) {
 pub mod aplic;
 pub mod console;
 pub mod imsic;
+pub mod pci;
 pub mod ringbuffer;
 pub mod trap;
