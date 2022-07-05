@@ -1,5 +1,6 @@
 use core::fmt::{Result, Write};
 use core::ptr::{read_volatile, write_volatile};
+use crate::page::pages_remaining;
 use crate::ringbuffer::{RingBuffer, RING_BUFFER_SIZE};
 
 const UART_BASE: usize = 0x1000_0000;
@@ -79,7 +80,7 @@ fn strequals(left: &[u8], right: &[u8]) -> bool {
             return true;
         }
     }
-    return true;
+    true
 }
 
 fn runcmd(buffer: &[u8]) {
@@ -89,9 +90,13 @@ fn runcmd(buffer: &[u8]) {
             write_volatile(0x10_0000 as *mut u16, 0x5555);
         }
     }
+    else if strequals(buffer, b"pages") {
+        println!("There are {} pages remaining.", pages_remaining());
+    }
     else if strequals(buffer, b"help") {
         println!("Commands: ");
-        println!("  quit - Quit");
+        println!("  pages   - How many pages are remaining?");
+        println!("  quit    - Quit");
     }
     else {
         println!("Command not found.");
@@ -106,6 +111,9 @@ pub fn run() {
         if let Some(c) = unsafe { CONSOLE_BUFFER.pop() } {
             let c_as_char = c as char;
             if c == 10 || c == 13 {
+                // Usually for a "terminal" connection, we get
+                // a \r (13) instead of a \n (10) depending on the terminal
+                // emulator. Check for either, and consider both a enter.
                 buffer[typed] = 0;
                 println!();
                 if typed > 0 {
@@ -115,13 +123,19 @@ pub fn run() {
                 typed = 0;
             }
             else if c == 127 {
+                // Backspace, make sure we don't go past the prompt
                 if typed > 0 {
+                    // 0x08 is the backspace key, and a BS/SP/BS will
+                    // clear whatever was at that point. The backspace alone
+                    // doesn't actually delete the character that was there.
                     print!("\x08 \x08");
                     typed -= 1;
                 }
             }
             else if c < 20 {
-                print!("{}", c);
+                // These are *unknown* characters, so instead print out
+                // its character number instead of trying to translate it.
+                print!(" '{}' ", c);
             }
             else if typed + 1 < buffer.len() {
                 buffer[typed] = c;
@@ -130,6 +144,7 @@ pub fn run() {
             }
         }
         else {
+            // There was nothing to grab, wait for an interrupt
             unsafe {
                 core::arch::asm!("wfi");
             }
