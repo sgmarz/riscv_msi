@@ -89,6 +89,7 @@ fn main(hart: usize) {
         println!("Booted on hart {}.", hart);
         imsic::imsic_init();
         aplic::aplic_init();
+        page::page_init();
         pci::pci_init();
         console::run();
 
@@ -106,6 +107,7 @@ fn main(hart: usize) {
 pub mod aplic;
 pub mod console;
 pub mod imsic;
+pub mod page;
 pub mod pci;
 pub mod ringbuffer;
 pub mod trap;

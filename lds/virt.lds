@@ -2,7 +2,7 @@ OUTPUT_ARCH( "riscv" )
 ENTRY(_start)
 MEMORY
 {
-  ram  (rwx) : ORIGIN = 0x80000000, LENGTH = 32M
+  ram  (rwx) : ORIGIN = 0x80000000, LENGTH = 24M
 }
 
 PHDRS
@@ -57,7 +57,7 @@ SECTIONS
   . = ALIGN(4096);
 
   PROVIDE(_stack_start = .);
-  PROVIDE(_stack_end = _stack_start + 8K * 8);
+  PROVIDE(_stack_end = _stack_start + 8K);
   PROVIDE(_heap_start = _stack_end);
   PROVIDE(_heap_end = _memory_end);
 }
