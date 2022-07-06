@@ -47,12 +47,12 @@ pub fn alloc<'a, T>() -> Option<&'a mut T> {
 /// 
 /// `None` - if the number of pages could not be allocated consecutively
 pub fn alloc_page(num: usize) -> Option<*mut u8> {
-    assert!(num != 0);
+    if pages_remaining() < num {
+        return None;
+    }
+    
     let ret;
     unsafe {
-        if PAGES as usize + num >= PAGES_END as usize {
-            return None;
-        }
         ret = PAGES;
         PAGES = PAGES.add(PAGE_SIZE * num);
     }
