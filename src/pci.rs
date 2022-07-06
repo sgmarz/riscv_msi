@@ -2,6 +2,9 @@
 const PCI_ECAM_BASE: usize = 0x3000_0000;
 const PCI_BAR_BASE: usize = 0x4000_0000;
 
+const COMMAND_REG_MEM_SPACE: u16 = 1 << 1;
+const COMMAND_REG_BUS_MASTER: u16 = 1 << 2;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct Type0Ecam {
@@ -115,18 +118,29 @@ fn pci_enum(bus: usize, slot: usize) {
     }
     println!("PCI Device {}:{}: Type {}, Vendor: 0x{:04x}, Device: 0x{:04x}", bus, slot, ecam.header_type, ecam.vendor_id, ecam.device_id);
     match ecam.header_type {
-        0 => pci_setup_type0(ecam),
-        1 => pci_setup_type1(ecam),
+        0 => pci_setup_type0(bus, slot, ecam),
+        1 => pci_setup_type1(bus, slot, ecam),
         _ => panic!("Unknown PCI type {}.", ecam.header_type)
     }
 }
 
-fn pci_setup_type0(ecam: &mut Ecam) {
-
+fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
+    // Type 0 setup (devices)
 }
 
-fn pci_setup_type1(ecam: &mut Ecam) {
+fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
+    // Type 1 setup (bridges)
+    let addrst = PCI_BAR_BASE | (slot << 20);
+    let addred = addrst + ((1 << 20) - 1);
 
+    ecam.command_reg = COMMAND_REG_MEM_SPACE;
+    ecam.typex.type1.memory_base = (addrst >> 16) as u16;
+    ecam.typex.type1.memory_limit = (addred >> 16) as u16;
+    ecam.typex.type1.prefetch_memory_base = (addrst >> 16) as u16;
+    ecam.typex.type1.prefetch_memory_limit = (addred >> 16) as u16;
+    ecam.typex.type1.primary_bus_no = bus as u8;
+    ecam.typex.type1.secondary_bus_no = slot as u8;
+    ecam.typex.type1.subordinate_bus_no = slot as u8;
 }
 
 pub fn pci_init() {
