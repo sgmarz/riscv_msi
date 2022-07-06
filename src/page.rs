@@ -65,8 +65,12 @@ pub fn alloc_page(num: usize) -> Option<*mut u8> {
 /// `usize` - the number of raw pages remaining on the heap.
 pub fn pages_remaining() -> usize {
     unsafe {
-        let addr_diff = PAGES_END as usize - PAGES as usize;
-        addr_diff / PAGE_SIZE
+        if PAGES_END.is_null() || PAGES.is_null() {
+            0
+        }
+        else {
+            (PAGES_END as usize - PAGES as usize) / PAGE_SIZE
+        }
     }
 }
 
