@@ -1,23 +1,60 @@
-use core::ptr::null_mut;
+use core::{mem::size_of, ptr::null_mut};
+
 
 pub const PAGE_SIZE: usize = 0x1000; // 4,096 bytes
 static mut PAGES: *mut u8 = null_mut();
 static mut PAGES_END: *mut u8 = null_mut();
 
+/// # Overview
+/// Align a value down to the next page size.
+/// # Arguments
+/// `bytes` - the number of bytes to round
+/// # Returns
+/// usize - the parameter rounded down.
+pub const fn align_down(bytes: usize) -> usize {
+    bytes & !(PAGE_SIZE - 1)
+}
+
+/// # Overview
+/// Align a value up to the next page size.
+/// # Arguments
+/// `bytes` - the number of bytes to round
+/// # Returns
+/// usize - the parameter rounded up.
+pub const fn align_up(bytes: usize) -> usize {
+    align_down(bytes + PAGE_SIZE - 1)
+}
+
+/// # Overview
+/// Allocate a new structure as a mutable reference
+/// This function will allocate in multiples of pages
+/// so this could be very wasteful!
+/// # Returns
+/// `Option<&mut T>` - A Some containing the reference to the data type or None if it could not be allocated.
 pub fn alloc<'a, T>() -> Option<&'a mut T> {
+    let num_pages = align_up(size_of::<T>()) / PAGE_SIZE;
     unsafe {
-        alloc_page().map(|ptr| (ptr as *mut T).as_mut().unwrap())
+        alloc_page(num_pages).map(|ptr| (ptr as *mut T).as_mut().unwrap())
     }
 }
 
-pub fn alloc_page() -> Option<*mut u8> {
+/// # Overview
+/// Allocate a number of consecutive pages
+/// # Arguments
+/// `num` - the number of pages to allocate
+/// # Returns
+/// `Some(*mut u8)` - a pointer to the top of the page
+/// 
+/// `None` - if the number of pages could not be allocated consecutively
+pub fn alloc_page(num: usize) -> Option<*mut u8> {
+    assert!(num != 0);
     let ret;
     unsafe {
-        if PAGES >= PAGES_END {
+        if PAGES as usize + num >= PAGES_END as usize {
             return None;
         }
         ret = PAGES;
-        PAGES = PAGES.add(PAGE_SIZE);
+        PAGES = PAGES.add(PAGE_SIZE * num);
     }
     Some(ret)
 }

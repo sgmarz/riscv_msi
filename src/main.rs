@@ -92,15 +92,6 @@ fn main(hart: usize) {
         page::page_init();
         pci::pci_init();
         console::run();
-
-        // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
-        // signals QEMU to exit. It literally is the exit() call, so many cleanups
-        // are not done.
-        // Remove the following that quits QEMU. Now that we have APLIC and UART,
-        // we can talk to it.
-        // unsafe {
-            // core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
-        // }
     }
 }
 

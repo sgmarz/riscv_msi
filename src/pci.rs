@@ -130,6 +130,9 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
 
 fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
     // Type 1 setup (bridges)
+
+    // To make things easy, the bridge is encoded with the bus number
+    // which is the same as the slot of the bridge.
     let addrst = PCI_BAR_BASE | (slot << 20);
     let addred = addrst + ((1 << 20) - 1);
 
