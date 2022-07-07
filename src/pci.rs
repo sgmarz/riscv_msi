@@ -1,4 +1,3 @@
-
 const PCI_ECAM_BASE: usize = 0x3000_0000;
 const PCI_BAR_BASE: usize = 0x4000_0000;
 
@@ -90,8 +89,7 @@ impl Ecam {
 
 #[repr(C)]
 struct MsixCapability {
-    pub id: u8,
-    pub next: u8,
+    pub cap: Capability,
     pub msgcontrol: u16,
     pub table: u32,
     pub pba: u32,
@@ -109,23 +107,67 @@ struct MsixPba {
     pub pending: u64,
 }
 
-
 fn pci_enum(bus: usize, slot: usize) {
     let ecam = Ecam::as_mut(bus, slot);
     if ecam.vendor_id == 0xffff {
         // Vendor id 0xFFFF means "not connected"
         return;
     }
-    println!("PCI Device {}:{}: Type {}, Vendor: 0x{:04x}, Device: 0x{:04x}", bus, slot, ecam.header_type, ecam.vendor_id, ecam.device_id);
+    println!(
+        "PCI Device {}:{}: Type {}, Vendor: 0x{:04x}, Device: 0x{:04x}",
+        bus, slot, ecam.header_type, ecam.vendor_id, ecam.device_id
+    );
     match ecam.header_type {
         0 => pci_setup_type0(bus, slot, ecam),
         1 => pci_setup_type1(bus, slot, ecam),
-        _ => panic!("Unknown PCI type {}.", ecam.header_type)
+        _ => panic!("Unknown PCI type {}.", ecam.header_type),
     }
 }
 
 fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
     // Type 0 setup (devices)
+    print_caps(ecam);
+    let mut baraddr = PCI_BAR_BASE | (bus << 20) | (slot << 16);
+    ecam.command_reg = 0;
+    let mut i = 0;
+    while i < 6 {
+        unsafe {
+            let barval = ecam.typex.type0.bar[i];
+            if barval == 0 || barval & 1 != 0 {
+                // If the bar is all 0s, it is unimplemented
+                // If the first bit is not 0, then it is I/O space,
+                // which we don't support.
+                i += 1;
+                continue;
+            }
+            let bartype = barval >> 1 & 3;
+            match bartype {
+                0b00 => {
+                    // 32-bit BAR
+                    let barptr = &mut ecam.typex.type0.bar[i] as *mut u32;
+                    barptr.write_volatile(0xFFFF_FFFF);
+                    let barsize = !(barptr.read_volatile() & !0xF) + 1;
+                    println!("  32-bit BAR {}, size {} bytes.", i, barsize);
+                    barptr.write_volatile(baraddr as u32);
+                    baraddr += barsize as usize;
+                    i += 1;
+                }
+                0b10 => {
+                    // 64-bit BAR
+                    let barptr = &mut ecam.typex.type0.bar[i] as *mut u32 as *mut u64;
+                    barptr.write_volatile(0xFFFF_FFFF_FFFF_FFFF);
+                    let barsize = !(barptr.read_volatile() & !0xF) + 1;
+                    println!("  64-bit BAR {}, size {} bytes.", i, barsize);
+                    barptr.write_volatile(baraddr as u64);
+                    baraddr += barsize as usize;
+                    i += 2;
+                }
+                _ => panic!("invalid bar type {}", bartype),
+            }
+        }
+    }
+
+    ecam.command_reg = COMMAND_REG_BUS_MASTER | COMMAND_REG_MEM_SPACE;
 }
 
 fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
@@ -146,13 +188,35 @@ fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
     ecam.typex.type1.subordinate_bus_no = slot as u8;
 }
 
+fn print_caps(ecam: &Ecam) {
+    let eptr = ecam as *const Ecam as *const u8;
+    if ecam.status_reg >> 4 & 1 != 1 {
+        // No capabilities
+        return;
+    }
+    let mut c = unsafe { ecam.typex.type0.capes_pointer };
+    while c != 0 {
+        unsafe {
+            let cap = eptr.add(c as usize) as *const Capability;
+            c = (*cap).next;
+
+            println!(
+                "PCI 0x{:04x}:0x{:04x}: capability 0x{:02x}, next {}.",
+                ecam.vendor_id,
+                ecam.device_id,
+                (*cap).id,
+                c
+            );
+        }
+    }
+}
+
 pub fn pci_init() {
     for bus in 0..=4 {
         // Typically, there are 8 bits for the bus number, but not
         // all have to be implemented.
         for slot in 0..32 {
             // The slot number is 5 bits
-
             // Do not enumerate the root
             if bus != 0 || slot != 0 {
                 pci_enum(bus, slot);
@@ -160,4 +224,3 @@ pub fn pci_init() {
         }
     }
 }
-

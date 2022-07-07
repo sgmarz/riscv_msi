@@ -67,7 +67,7 @@ macro_rules! csr_read {
 
 // MAX_HARTS determines how many harts can run on this OS. If a HART is not permitted to
 // run, it will be sent to park and never be able to leave, hence turning it off.
-const MAX_HARTS: usize = 4;
+const MAX_HARTS: usize = 1;
 // Trap frames are used to store the 32 general purpose registers when a hart enters a
 // trap.
 static mut TRAP_FRAMES: [[usize; 32]; MAX_HARTS] = [[0; 32]; MAX_HARTS];
