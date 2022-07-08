@@ -90,7 +90,6 @@ fn main(hart: usize) {
         imsic::imsic_init();
         aplic::aplic_init();
         page::page_init();
-        pci::pci_init();
         console::run();
     }
 }

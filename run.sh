@@ -7,7 +7,7 @@ fi
 
 KERNEL=$1
 
-TRACES=""
+TRACES="pci_nvme*"
 
 PARAMS+=" -nographic"
 PARAMS+=" -machine virt,aclint=on,aia=aplic-imsic"
@@ -30,8 +30,11 @@ PARAMS+=" -device usb-tablet,id=usbtablet"
 # PARAMS+=" -device vhost-vsock-pci-non-transitional,bus=bridge2,guest-cid=9,id=vsock"
 # PARAMS+=" -device virtio-blk-pci-non-transitional,drive=hdd1,bus=bridge2,id=blk1"
 # PARAMS+=" -device virtio-net-pci-non-transitional,netdev=net1,bus=bridge4,id=net"
-PARAMS+=" -device nvme,serial=deadbeef,drive=hdd1,bus=bridge2"
 PARAMS+=" -drive if=none,format=raw,file=hdd.dsk,id=hdd1"
+PARAMS+=" -device nvme-subsys,id=nvmesubsys,nqn=1234"
+PARAMS+=" -device nvme,serial=deadbeef,id=nvmehdd,subsys=nvmesubsys,bus=bridge2"
+PARAMS+=" -device nvme-ns,drive=hdd1,bus=nvmehdd"
+# PARAMS+=" -device nvme,serial=deadbeef,drive=hdd1,bus=bridge2,id=nvmehdd"
 # PARAMS+=" -netdev user,id=net1,hostfwd=tcp::35555-:22"
 
 T=""

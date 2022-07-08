@@ -147,7 +147,7 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
                     let barptr = &mut ecam.typex.type0.bar[i] as *mut u32;
                     barptr.write_volatile(0xFFFF_FFFF);
                     let barsize = !(barptr.read_volatile() & !0xF) + 1;
-                    println!("  32-bit BAR {}, size {} bytes.", i, barsize);
+                    println!("  32-bit BAR {}, size {} bytes set to 0x{:08x}.", i, barsize, baraddr);
                     barptr.write_volatile(baraddr as u32);
                     baraddr += barsize as usize;
                     i += 1;
@@ -157,7 +157,7 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
                     let barptr = &mut ecam.typex.type0.bar[i] as *mut u32 as *mut u64;
                     barptr.write_volatile(0xFFFF_FFFF_FFFF_FFFF);
                     let barsize = !(barptr.read_volatile() & !0xF) + 1;
-                    println!("  64-bit BAR {}, size {} bytes.", i, barsize);
+                    println!("  64-bit BAR {}, size {} bytes set to 0x{:08x}.", i, barsize, baraddr);
                     barptr.write_volatile(baraddr as u64);
                     baraddr += barsize as usize;
                     i += 2;

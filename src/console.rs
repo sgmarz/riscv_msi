@@ -2,6 +2,7 @@ use core::fmt::{Result, Write};
 use core::ptr::{read_volatile, write_volatile};
 use crate::page::pages_remaining;
 use crate::ringbuffer::{RingBuffer, RING_BUFFER_SIZE};
+use crate::pci::pci_init;
 
 const UART_BASE: usize = 0x1000_0000;
 const UART_THR: usize = 0;
@@ -95,8 +96,12 @@ fn runcmd(buffer: &[u8]) {
     }
     else if strequals(buffer, b"help") {
         println!("Commands: ");
-        println!("  pages   - How many pages are remaining?");
-        println!("  quit    - Quit");
+        println!("  pages    - How many pages are remaining?");
+        println!("  startpci - Start PCI");
+        println!("  quit     - Quit");
+    }
+    else if strequals(buffer, b"startpci") {
+        pci_init();
     }
     else {
         println!("Command not found.");
