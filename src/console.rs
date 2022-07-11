@@ -97,11 +97,13 @@ fn runcmd(buffer: &[u8]) {
     else if strequals(buffer, b"help") {
         println!("Commands: ");
         println!("  pages    - How many pages are remaining?");
-        println!("  startpci - Start PCI");
+        println!("  pci      - Start PCI");
         println!("  quit     - Quit");
     }
-    else if strequals(buffer, b"startpci") {
+    else if strequals(buffer, b"pci") {
+        print!("Starting PCI subsystem...");
         pci_init();
+        println!("done.");
     }
     else {
         println!("Command not found.");

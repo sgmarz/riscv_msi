@@ -1,3 +1,5 @@
+use core::ptr::write_volatile;
+
 const PCI_ECAM_BASE: usize = 0x3000_0000;
 const PCI_BAR_BASE: usize = 0x4000_0000;
 
@@ -113,10 +115,10 @@ fn pci_enum(bus: usize, slot: usize) {
         // Vendor id 0xFFFF means "not connected"
         return;
     }
-    println!(
-        "PCI Device {}:{}: Type {}, Vendor: 0x{:04x}, Device: 0x{:04x}",
-        bus, slot, ecam.header_type, ecam.vendor_id, ecam.device_id
-    );
+    // println!(
+    //     "PCI Device {}:{}: Type {}, Vendor: 0x{:04x}, Device: 0x{:04x}",
+    //     bus, slot, ecam.header_type, ecam.vendor_id, ecam.device_id
+    // );
     match ecam.header_type {
         0 => pci_setup_type0(bus, slot, ecam),
         1 => pci_setup_type1(bus, slot, ecam),
@@ -126,7 +128,6 @@ fn pci_enum(bus: usize, slot: usize) {
 
 fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
     // Type 0 setup (devices)
-    print_caps(ecam);
     let mut baraddr = PCI_BAR_BASE | (bus << 20) | (slot << 16);
     ecam.command_reg = 0;
     let mut i = 0;
@@ -147,7 +148,7 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
                     let barptr = &mut ecam.typex.type0.bar[i] as *mut u32;
                     barptr.write_volatile(0xFFFF_FFFF);
                     let barsize = !(barptr.read_volatile() & !0xF) + 1;
-                    println!("  32-bit BAR {}, size {} bytes set to 0x{:08x}.", i, barsize, baraddr);
+                    // println!("  32-bit BAR {}, size {} bytes set to 0x{:08x}.", i, barsize, baraddr);
                     barptr.write_volatile(baraddr as u32);
                     baraddr += barsize as usize;
                     i += 1;
@@ -157,7 +158,7 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
                     let barptr = &mut ecam.typex.type0.bar[i] as *mut u32 as *mut u64;
                     barptr.write_volatile(0xFFFF_FFFF_FFFF_FFFF);
                     let barsize = !(barptr.read_volatile() & !0xF) + 1;
-                    println!("  64-bit BAR {}, size {} bytes set to 0x{:08x}.", i, barsize, baraddr);
+                    // println!("  64-bit BAR {}, size {} bytes set to 0x{:08x}.", i, barsize, baraddr);
                     barptr.write_volatile(baraddr as u64);
                     baraddr += barsize as usize;
                     i += 2;
@@ -168,6 +169,7 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
     }
 
     ecam.command_reg = COMMAND_REG_BUS_MASTER | COMMAND_REG_MEM_SPACE;
+    enum_caps(ecam);
 }
 
 fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
@@ -188,7 +190,7 @@ fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
     ecam.typex.type1.subordinate_bus_no = slot as u8;
 }
 
-fn print_caps(ecam: &Ecam) {
+fn enum_caps(ecam: &Ecam) {
     let eptr = ecam as *const Ecam as *const u8;
     if ecam.status_reg >> 4 & 1 != 1 {
         // No capabilities
@@ -197,18 +199,47 @@ fn print_caps(ecam: &Ecam) {
     let mut c = unsafe { ecam.typex.type0.capes_pointer };
     while c != 0 {
         unsafe {
-            let cap = eptr.add(c as usize) as *const Capability;
+            let cap = eptr.add(c as usize) as *mut Capability;
             c = (*cap).next;
 
-            println!(
-                "PCI 0x{:04x}:0x{:04x}: capability 0x{:02x}, next {}.",
-                ecam.vendor_id,
-                ecam.device_id,
-                (*cap).id,
-                c
-            );
+            if (*cap).id == 0x11 {
+                // MSI-X capability
+                setup_msix(ecam, cap);
+            }
         }
     }
+}
+
+unsafe fn setup_msix(ecam: &Ecam, cap: *mut Capability) {
+    use crate::imsic::IMSIC_M;
+    let msixcap = cap as *mut MsixCapability;
+    let table_offset = msixcap.read_volatile().table & !7;
+    let table_bir = msixcap.read_volatile().table & 7;
+    let pba_offset = msixcap.read_volatile().pba & !7;
+    let pba_bir = msixcap.read_volatile().pba & 7;
+    // println!("Table offset: 0x{:08x} on {}, PBA offset: 0x{:08x} on {}.", table_offset, table_bir, pba_offset, pba_bir);
+    let tabba = get_bar_addr(ecam, table_bir as usize) + table_offset as usize;
+    let pbaba = get_bar_addr(ecam, pba_bir as usize) + pba_offset as usize;
+    // println!("TAB = 0x{:08x}, PBA = 0x{:08x}", tabba, pbaba);
+
+    // Enable MSI-X by setting bit 15 (MSI-X Enable bit)
+    write_volatile(&mut (*msixcap).msgcontrol, 1 << 15);
+
+    let tabsize = (msixcap.read_volatile().msgcontrol & 0x3FF) + 1;
+    // println!("Table size = {}", tabsize);
+
+    let msixtab = (tabba as *mut MsixTable).as_mut().unwrap();
+    // println!("Control reg = 0x{:08x}", msixtab.control);
+    msixtab.addr = IMSIC_M as u64;
+    msixtab.data = 31;
+    msixtab.control = 0;
+}
+
+fn get_bar_addr(ecam: &Ecam, which: usize) -> usize {
+    assert!(which < 6);
+
+    let ba = unsafe { ecam.typex.type0.bar[which] };
+    ba as usize & !0xF
 }
 
 pub fn pci_init() {
