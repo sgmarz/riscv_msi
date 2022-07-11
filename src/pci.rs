@@ -221,7 +221,7 @@ fn setup_msix(ecam: &Ecam, cap: *mut Capability) {
     // println!("Table offset: 0x{:08x} on {}, PBA offset: 0x{:08x} on {}.", table_offset, table_bir, pba_offset, pba_bir);
     let tabba = get_bar_addr(ecam, table_bir as usize) + table_offset as usize;
     let pbaba = get_bar_addr(ecam, pba_bir as usize) + pba_offset as usize;
-    // println!("TAB = 0x{:08x}, PBA = 0x{:08x}", tabba, pbaba);
+    println!("TAB = 0x{:08x}, PBA = 0x{:08x}", tabba, pbaba);
 
     // Enable MSI-X by setting bit 15 (MSI-X Enable bit)
     unsafe {
@@ -229,10 +229,10 @@ fn setup_msix(ecam: &Ecam, cap: *mut Capability) {
     }
 
     let tabsize = unsafe { (msixcapptr.read_volatile().msgcontrol & 0x3FF) + 1 };
-    // println!("Table size = {}", tabsize);
+    println!("Table size = {}", tabsize);
 
     let msixtab = unsafe { (tabba as *mut MsixTable).as_mut().unwrap() };
-    // println!("Control reg = 0x{:08x}", msixtab.control);
+    println!("Control reg = 0x{:08x}", msixtab.control);
     msixtab.addr = IMSIC_M as u64;
     msixtab.data = 31;
     msixtab.control = 0;
