@@ -1,4 +1,5 @@
 use core::ptr::write_volatile;
+use crate::imsic::IMSIC_M;
 
 const PCI_ECAM_BASE: usize = 0x3000_0000;
 const PCI_BAR_BASE: usize = 0x4000_0000;
@@ -211,7 +212,6 @@ fn enum_caps(ecam: &Ecam) {
 }
 
 unsafe fn setup_msix(ecam: &Ecam, cap: *mut Capability) {
-    use crate::imsic::IMSIC_M;
     let msixcap = cap as *mut MsixCapability;
     let table_offset = msixcap.read_volatile().table & !7;
     let table_bir = msixcap.read_volatile().table & 7;
@@ -237,9 +237,7 @@ unsafe fn setup_msix(ecam: &Ecam, cap: *mut Capability) {
 
 fn get_bar_addr(ecam: &Ecam, which: usize) -> usize {
     assert!(which < 6);
-
-    let ba = unsafe { ecam.typex.type0.bar[which] };
-    ba as usize & !0xF
+    unsafe { ecam.typex.type0.bar[which] as usize & !0xf }
 }
 
 pub fn pci_init() {
