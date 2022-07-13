@@ -1,9 +1,15 @@
 use core::ptr::write_volatile;
 use crate::imsic::IMSIC_M;
 
+// ECAM is hard coded in virt.c to 0x3000_0000
 const PCI_ECAM_BASE: usize = 0x3000_0000;
+// BARs are reserved space in both 0x4000_0000
+// and 0x4_0000_0000. Since we're using RV32I, opt
+// for the 32-bit address to avoid a dual cycle read/write
+// from PCI system.
 const PCI_BAR_BASE: usize = 0x4000_0000;
 
+// Bits for the command register in ECAM space
 const COMMAND_REG_MEM_SPACE: u16 = 1 << 1;
 const COMMAND_REG_BUS_MASTER: u16 = 1 << 2;
 
@@ -235,8 +241,13 @@ fn setup_msix(ecam: &Ecam, cap: *mut Capability) {
     msixtab.control = 0;
 }
 
+/// Get the bar address straight from the BAR register. We could store the
+/// BAR, but we already have space for it, so why waste the 4 or 8 bytes?
 fn get_bar_addr(ecam: &Ecam, which: usize) -> usize {
     assert!(which < 6);
+    // Strip off the last four bits which do not contribute to the address
+    // and are instead used to denote the size of the BAR as well as where
+    // the BAR connects 0 = MMIO, 1 = PIO
     unsafe { ecam.typex.type0.bar[which] as usize & !0xf }
 }
 
@@ -246,7 +257,7 @@ pub fn pci_init() {
         // all have to be implemented.
         for slot in 0..32 {
             // The slot number is 5 bits
-            // Do not enumerate the root
+            // Do not setup the root
             if bus != 0 || slot != 0 {
                 pci_setup(bus, slot);
             }

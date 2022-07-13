@@ -87,7 +87,8 @@ impl Aplic {
     }
 
     /// # Overview
-    /// Set the MSI target physical address
+    /// Set the MSI target physical address. This only accepts the lower
+    /// 32-bits of an address.
     /// ## Arguments
     /// * `mode` the MSI mode (machine or supervisor)
     /// * `addr` the physical address for messages. This MUST be page aligned.
