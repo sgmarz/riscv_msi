@@ -106,6 +106,7 @@ struct MsixTable {
 }
 
 #[repr(C)]
+#[allow(dead_code)]
 struct MsixPba {
     pub pending: u64,
 }

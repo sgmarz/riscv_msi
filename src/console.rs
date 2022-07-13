@@ -1,8 +1,13 @@
-use core::fmt::{Result, Write};
-use core::ptr::{read_volatile, write_volatile};
-use crate::page::pages_remaining;
-use crate::ringbuffer::{RingBuffer, RING_BUFFER_SIZE};
-use crate::pci::pci_init;
+use crate::{
+    page::pages_remaining,
+    pci::pci_init,
+    ringbuffer::{RingBuffer, RING_BUFFER_SIZE},
+};
+use core::{
+    arch::asm,
+    fmt::{Result, Write},
+    ptr::{read_volatile, write_volatile},
+};
 
 // Registers for the NS16550A. This is connected to 0x1000_0000
 // via virt.c in QEMU.
@@ -44,8 +49,7 @@ impl Uart {
     pub fn read_char(&mut self) -> Option<u8> {
         if uart_read(UART_LSR) & 1 == 1 {
             Some(uart_read(UART_RBR))
-        }
-        else {
+        } else {
             None
         }
     }
@@ -64,7 +68,6 @@ impl Write for Uart {
         Ok(())
     }
 }
-
 
 static mut CONSOLE_BUFFER: RingBuffer = RingBuffer::new();
 
@@ -95,8 +98,7 @@ fn strequals(left: &[u8], right: &[u8]) -> bool {
     for i in 0..right.len() {
         if left[i] != right[i] {
             return false;
-        }
-        else if left[i] == 0 {
+        } else if left[i] == 0 {
             return true;
         }
     }
@@ -109,22 +111,18 @@ fn runcmd(buffer: &[u8]) {
         unsafe {
             write_volatile(0x10_0000 as *mut u16, 0x5555);
         }
-    }
-    else if strequals(buffer, b"pages") {
+    } else if strequals(buffer, b"pages") {
         println!("There are {} pages remaining.", pages_remaining());
-    }
-    else if strequals(buffer, b"help") {
+    } else if strequals(buffer, b"help") {
         println!("Commands: ");
         println!("  pages    - How many pages are remaining?");
         println!("  pci      - Start PCI");
         println!("  quit     - Quit");
-    }
-    else if strequals(buffer, b"pci") {
+    } else if strequals(buffer, b"pci") {
         print!("Starting PCI subsystem...");
         pci_init();
         println!("done.");
-    }
-    else {
+    } else {
         println!("Command not found.");
     }
 }
@@ -147,8 +145,7 @@ pub fn run() {
                 }
                 prompt();
                 typed = 0;
-            }
-            else if c == 127 {
+            } else if c == 127 {
                 // Backspace, make sure we don't go past the prompt
                 if typed > 0 {
                     // 0x08 is the backspace key, and a BS/SP/BS will
@@ -157,8 +154,7 @@ pub fn run() {
                     print!("\x08 \x08");
                     typed -= 1;
                 }
-            }
-            else if c == 0x1B {
+            } else if c == 0x1B {
                 // Escape sequence
                 let esc1 = unsafe { CONSOLE_BUFFER.pop().unwrap_or(0x5B) };
                 let esc2 = unsafe { CONSOLE_BUFFER.pop().unwrap_or(0x40) };
@@ -171,25 +167,20 @@ pub fn run() {
                         _ => {}
                     }
                 }
-            }
-            else if c < 20 {
+            } else if c < 20 {
                 // These are *unknown* characters, so instead print out
                 // its character number instead of trying to translate it.
                 print!(" '{}' ", c);
-            }
-            else if typed + 1 < buffer.len() {
+            } else if typed + 1 < buffer.len() {
                 buffer[typed] = c;
                 typed += 1;
                 print!("{}", c_as_char)
             }
-        }
-        else {
+        } else {
             // There was nothing to grab, wait for an interrupt
             unsafe {
-                core::arch::asm!("wfi");
+                asm!("wfi");
             }
         }
     }
 }
-
-
