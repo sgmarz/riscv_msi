@@ -4,24 +4,35 @@ use crate::page::pages_remaining;
 use crate::ringbuffer::{RingBuffer, RING_BUFFER_SIZE};
 use crate::pci::pci_init;
 
+// Registers for the NS16550A. This is connected to 0x1000_0000
+// via virt.c in QEMU.
 const UART_BASE: usize = 0x1000_0000;
+// THR is used if STORE
 const UART_THR: usize = 0;
+// RBR is used if LOAD
 const UART_RBR: usize = 0;
 const UART_ICR: usize = 1;
 const UART_FCR: usize = 2;
 const UART_LCR: usize = 3;
 const UART_LSR: usize = 5;
 
+/// Write to a UART register. There are no safety checks! So,
+/// make sure you only use the UART_XXYYZZ registers for reg.
 fn uart_write(reg: usize, val: u8) {
     unsafe {
         write_volatile((UART_BASE + reg) as *mut u8, val);
     }
 }
 
+/// Read from a UART register. There are no safety checks!
 fn uart_read(reg: usize) -> u8 {
     unsafe { read_volatile((UART_BASE + reg) as *const u8) }
 }
 
+/// Initialize the UART system. For virt, this is probably not necessary.
+/// However, LCR = 3 sets word size to 8 bits, FCR = 1 enables the FIFO
+/// and ICR = 1 enables interrupts to be triggered when the RBR receives
+/// data.
 pub fn uart_init() {
     uart_write(UART_LCR, 3);
     uart_write(UART_FCR, 1);
@@ -57,6 +68,10 @@ impl Write for Uart {
 
 static mut CONSOLE_BUFFER: RingBuffer = RingBuffer::new();
 
+/// This will be called when the IRQ #10 (hard coded in virt.c)
+/// is triggered. This function first determines if the RBR has
+/// data via the line status register (LSR) before pushing the
+/// received data to the console ring buffer (CONSOLE_BUFFER).
 pub fn console_irq() {
     if uart_read(UART_LSR) & 1 == 1 {
         unsafe {
@@ -69,6 +84,10 @@ fn prompt() {
     print!("\n> ");
 }
 
+/// Very dump strcmp-like function. The left is expected
+/// to be a buffer and the right is expected to be the
+/// hard-coded "comparison". Usually, the right is a
+/// converted string (in rust, using b"xxyyzz").
 fn strequals(left: &[u8], right: &[u8]) -> bool {
     if left.len() < right.len() {
         return false;
