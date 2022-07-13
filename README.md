@@ -24,6 +24,8 @@ or
 
 # Downloading Rust Toolchain
 
+Get rust here: [rustup.rs](http://rustup.rs)
+
 Make sure the riscv32i-unknown-none-elf target is added.
 
 `rustup target add riscv32i-unknown-none-elf`
