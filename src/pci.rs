@@ -111,16 +111,12 @@ struct MsixPba {
     pub pending: u64,
 }
 
-fn pci_enum(bus: usize, slot: usize) {
+fn pci_setup(bus: usize, slot: usize) {
     let ecam = Ecam::as_mut(bus, slot);
     if ecam.vendor_id == 0xffff {
         // Vendor id 0xFFFF means "not connected"
         return;
     }
-    // println!(
-    //     "PCI Device {}:{}: Type {}, Vendor: 0x{:04x}, Device: 0x{:04x}",
-    //     bus, slot, ecam.header_type, ecam.vendor_id, ecam.device_id
-    // );
     match ecam.header_type {
         0 => pci_setup_type0(bus, slot, ecam),
         1 => pci_setup_type1(bus, slot, ecam),
@@ -252,7 +248,7 @@ pub fn pci_init() {
             // The slot number is 5 bits
             // Do not enumerate the root
             if bus != 0 || slot != 0 {
-                pci_enum(bus, slot);
+                pci_setup(bus, slot);
             }
         }
     }
