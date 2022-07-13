@@ -139,6 +139,20 @@ pub fn run() {
                     typed -= 1;
                 }
             }
+            else if c == 0x1B {
+                // Escape sequence
+                let esc1 = unsafe { CONSOLE_BUFFER.pop().unwrap_or(0x5B) };
+                let esc2 = unsafe { CONSOLE_BUFFER.pop().unwrap_or(0x40) };
+                if esc1 == 0x5B {
+                    match esc2 {
+                        0x41 => println!("UP"),
+                        0x42 => println!("DOWN"),
+                        0x43 => println!("RIGHT"),
+                        0x44 => println!("LEFT"),
+                        _ => {}
+                    }
+                }
+            }
             else if c < 20 {
                 // These are *unknown* characters, so instead print out
                 // its character number instead of trying to translate it.
