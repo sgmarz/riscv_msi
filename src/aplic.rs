@@ -2,6 +2,8 @@
 //! Stephen Marz
 //! 1 Jun 2022
 
+// These MMIO values are hard coded in the QEMU virt
+// machine.
 // M-mode APLIC
 const APLIC_M: usize = 0xc00_0000;
 // S-mode APLIC
@@ -157,8 +159,7 @@ impl Aplic {
     pub fn set_ie(&mut self, irq: u32, enabled: bool) {
         if enabled {
             self.setienum = irq;
-        }
-        else {
+        } else {
             self.clrienum = irq;
         }
     }
@@ -171,8 +172,7 @@ impl Aplic {
     pub fn set_ip(&mut self, irq: u32, pending: bool) {
         if pending {
             self.setipnum = irq;
-        }
-        else {
+        } else {
             self.clripnum = irq;
         }
     }
@@ -189,20 +189,42 @@ struct InterruptDeliveryControl {
 
 #[allow(dead_code)]
 impl InterruptDeliveryControl {
+    /// # Overview
+    /// Get the IDC portion of a hart's APLIC
+    /// # Arguments
+    /// `hart` - the HART number for the IDC to get
+    /// # Returns
+    /// A mutable MMIO pointer to the IDC registers
     const fn ptr(hart: usize) -> *mut Self {
         assert!(hart < 1024);
         (APLIC_S_IDC + hart * 0x20) as *mut Self
     }
 
+    /// # Overview
+    /// Get an immutable reference to the IDC registers
+    /// # Arguments
+    /// `hart` - the HART number for the IDC to get
+    /// # Returns
+    /// An immutable reference to the IDC area
     pub fn as_ref<'a>(hart: usize) -> &'a Self {
         unsafe { Self::ptr(hart).as_ref().unwrap() }
     }
 
+    /// # Overview
+    /// Get a mutable reference to the IDC registers
+    /// # Arguments
+    /// `hart` - the HART number for the IDC to get
+    /// # Returns
+    /// A mutable reference to the IDC area
     pub fn as_mut<'a>(hart: usize) -> &'a mut Self {
         unsafe { Self::ptr(hart).as_mut().unwrap() }
     }
 }
 
+/// # Overview
+/// Intiailize the APLIC system and run a test, including
+/// setting up the APLIC to send messages to the IMSIC in
+/// supervisor mode.
 pub fn aplic_init() {
     // The root APLIC
     let mplic = Aplic::as_mut(AplicMode::Machine);
@@ -217,12 +239,17 @@ pub fn aplic_init() {
     mplic.set_msiaddr(AplicMode::Supervisor, crate::imsic::IMSIC_S);
 
     // Delegate interrupt 10 to child 0, which is APLIC_S
+    // Interrupt 10 is the UART. So, whenever the UART receives something
+    // into its receiver buffer register, it triggers an IRQ #10 to the APLIC.
     mplic.sourcecfg_delegate(10, 0);
 
     // The EIID is the value that is written to the MSI address
     // When we read TOPEI in IMSIC, it will give us the EIID if it
     // has been enabled.
     splic.set_target(10, 0, 0, 10);
+
+    // Level high means to trigger the message delivery when the IRQ is
+    // asserted (high).
     splic.set_sourcecfg(10, SourceModes::LevelHigh);
 
     // The order is important. QEMU will not allow enabling of the IRQ
