@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
 use crate::console::console_irq;
-use core::arch::asm;
-use core::ptr::write_volatile;
+use core::{arch::asm, ptr::write_volatile};
 
 // Each hart is a page away from each other (4096 bytes or 0x1000)
 const IMSIC_HART_STRIDE: usize = 0x1000;

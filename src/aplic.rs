@@ -145,9 +145,11 @@ impl Aplic {
     /// * `msimode` `true`: the APLIC will send MSIs for interrupts, `false`: the APLIC will only trigger actual wires.
     /// * `enabled` `true`: this APLIC is enabled and can receive/send interrupts, `false`: the APLIC domain is disabled.
     pub fn set_domaincfg(&mut self, bigendian: bool, msimode: bool, enabled: bool) {
-        let enabled = enabled as u32;
-        let msimode = msimode as u32;
-        let bigendian = bigendian as u32;
+        // Rust library assures that converting a bool into u32 will use
+        // 1 for true and 0 for false
+        let enabled = u32::from(enabled);
+        let msimode = u32::from(msimode);
+        let bigendian = u32::from(bigendian);
         self.domaincfg = (enabled << 8) | (msimode << 2) | bigendian;
     }
 

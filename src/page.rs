@@ -2,7 +2,7 @@ use core::{mem::size_of, ptr::null_mut};
 
 
 pub const PAGE_SIZE: usize = 0x1000; // 4,096 bytes
-static mut PAGES: *mut u8 = null_mut();
+static mut PAGES_START: *mut u8 = null_mut();
 static mut PAGES_END: *mut u8 = null_mut();
 
 /// # Overview
@@ -48,15 +48,16 @@ pub fn alloc<'a, T>() -> Option<&'a mut T> {
 /// `None` - if the number of pages could not be allocated consecutively
 pub fn alloc_page(num: usize) -> Option<*mut u8> {
     if pages_remaining() < num {
-        return None;
+        None
     }
-    
-    let ret;
-    unsafe {
-        ret = PAGES;
-        PAGES = PAGES.add(PAGE_SIZE * num);
+    else {
+        let ret;
+        unsafe {
+            ret = PAGES_START;
+            PAGES_START = PAGES_START.add(PAGE_SIZE * num);
+        }
+        Some(ret)
     }
-    Some(ret)
 }
 
 /// # Overview
@@ -65,11 +66,11 @@ pub fn alloc_page(num: usize) -> Option<*mut u8> {
 /// `usize` - the number of raw pages remaining on the heap.
 pub fn pages_remaining() -> usize {
     unsafe {
-        if PAGES_END.is_null() || PAGES.is_null() {
+        if PAGES_END.is_null() || PAGES_START.is_null() {
             0
         }
         else {
-            (PAGES_END as usize - PAGES as usize) / PAGE_SIZE
+            (PAGES_END as usize - PAGES_START as usize) / PAGE_SIZE
         }
     }
 }
@@ -84,7 +85,7 @@ pub fn page_init() {
         // Basically convert the symbols into pointers. The thing about
         // this is that the address of the symbols is the address we want
         // not the value of the symbol.
-        PAGES = (&_heap_start) as *const usize as *mut u8;
+        PAGES_START = (&_heap_start) as *const usize as *mut u8;
         PAGES_END = (&_heap_end) as *const usize as *mut u8;
     }
 }
