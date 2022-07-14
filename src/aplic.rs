@@ -114,8 +114,7 @@ impl Aplic {
     /// * `eiid` - the identification number of the irq (usually the same as the irq itself)
     pub fn set_target(&mut self, irq: u32, hart: u32, guest: u32, eiid: u32) {
         assert!(irq > 1 && irq < 1024);
-        let irq = irq as usize;
-        self.target[irq - 1] = (hart << 18) | (guest << 12) | eiid;
+        self.target[irq as usize - 1] = (hart << 18) | (guest << 12) | eiid;
     }
 
     /// # Overview
