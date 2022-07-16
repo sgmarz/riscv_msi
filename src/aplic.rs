@@ -11,6 +11,8 @@ const APLIC_S: usize = 0xd00_0000;
 // S-mode interrupt delivery controller
 const APLIC_S_IDC: usize = 0xd00_4000;
 
+use core::ptr::write_volatile;
+
 #[repr(u32)]
 #[allow(dead_code)]
 enum SourceModes {
@@ -115,6 +117,9 @@ impl Aplic {
     pub fn set_target(&mut self, irq: u32, hart: u32, guest: u32, eiid: u32) {
         assert!(irq > 1 && irq < 1024);
         self.target[irq as usize - 1] = (hart << 18) | (guest << 12) | eiid;
+        // unsafe {
+        // write_volatile(&mut self.target[irq as usize - 1], (hart << 18) | (guest << 12) | eiid);
+        // }
     }
 
     /// # Overview
