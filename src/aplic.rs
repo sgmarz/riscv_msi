@@ -11,8 +11,6 @@ const APLIC_S: usize = 0xd00_0000;
 // S-mode interrupt delivery controller
 const APLIC_S_IDC: usize = 0xd00_4000;
 
-use core::ptr::write_volatile;
-
 #[repr(u32)]
 #[allow(dead_code)]
 enum SourceModes {
