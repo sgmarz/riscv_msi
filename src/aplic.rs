@@ -11,8 +11,6 @@ const APLIC_S: usize = 0xd00_0000;
 // S-mode interrupt delivery controller
 const APLIC_S_IDC: usize = 0xd00_4000;
 
-use core::ptr::write_volatile;
-
 #[repr(u32)]
 #[allow(dead_code)]
 enum SourceModes {
@@ -115,7 +113,7 @@ impl Aplic {
     /// * `guest` - the guest identifier to send these interrupts
     /// * `eiid` - the identification number of the irq (usually the same as the irq itself)
     pub fn set_target(&mut self, irq: u32, hart: u32, guest: u32, eiid: u32) {
-        assert!(irq > 1 && irq < 1024);
+        assert!(irq > 0 && irq < 1024);
         self.target[irq as usize - 1] = (hart << 18) | (guest << 12) | eiid;
         // unsafe {
         // write_volatile(&mut self.target[irq as usize - 1], (hart << 18) | (guest << 12) | eiid);
@@ -129,7 +127,7 @@ impl Aplic {
     /// * `irq` the interrupt number to set
     /// * `mode` the source mode--how the interrupt is triggered.
     pub fn set_sourcecfg(&mut self, irq: u32, mode: SourceModes) {
-        assert!(irq > 1 && irq < 1024);
+        assert!(irq > 0 && irq < 1024);
         self.sourcecfg[irq as usize - 1] = mode as u32;
     }
 
@@ -139,7 +137,7 @@ impl Aplic {
     /// * `irq` the interrupt number to delegate
     /// * `child` the child to delegate this interrupt to
     pub fn sourcecfg_delegate(&mut self, irq: u32, child: u32) {
-        assert!(irq > 1 && irq < 1024);
+        assert!(irq > 0 && irq < 1024);
         self.sourcecfg[irq as usize - 1] = 1 << 10 | child;
     }
 
