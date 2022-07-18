@@ -115,9 +115,6 @@ impl Aplic {
     pub fn set_target_msi(&mut self, irq: u32, hart: u32, guest: u32, eiid: u32) {
         assert!(irq > 0 && irq < 1024);
         self.target[irq as usize - 1] = (hart << 18) | (guest << 12) | eiid;
-        // unsafe {
-        // write_volatile(&mut self.target[irq as usize - 1], (hart << 18) | (guest << 12) | eiid);
-        // }
     }
 
     /// # Overview
