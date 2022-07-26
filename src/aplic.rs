@@ -202,6 +202,7 @@ impl Aplic {
     }
 }
 
+/// Interrupt Delivery Control is only used in 'direct' mode
 #[repr(C)]
 struct InterruptDeliveryControl {
     pub idelivery: u32,
