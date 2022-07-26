@@ -255,12 +255,9 @@ pub fn pci_init() {
     for bus in 0..=4 {
         // Typically, there are 8 bits for the bus number, but not
         // all have to be implemented.
-        for slot in 0..32 {
-            // The slot number is 5 bits
-            // Do not setup the root
-            if bus != 0 || slot != 0 {
-                pci_setup(bus, slot);
-            }
+        let slot_start = if bus == 0 { 1 } else { 0 };
+        for slot in slot_start..32 {
+            pci_setup(bus, slot);
         }
     }
 }
