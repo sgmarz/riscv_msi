@@ -109,11 +109,22 @@ impl Aplic {
     /// * `hart` - the hart that will receive interrupts from this irq
     /// * `guest` - the guest identifier to send these interrupts
     /// * `eiid` - the identification number of the irq (usually the same as the irq itself)
-    pub fn set_target(&mut self, irq: u32, hart: u32, guest: u32, eiid: u32) {
-        assert!(irq > 1 && irq < 1024);
-        let irq = irq as usize;
-        self.target[irq - 1] = (hart << 18) | (guest << 12) | eiid;
+    pub fn set_target_msi(&mut self, irq: u32, hart: u32, guest: u32, eiid: u32) {
+        assert!(irq > 0 && irq < 1024);
+        self.target[irq as usize - 1] = (hart << 18) | (guest << 12) | eiid;
     }
+
+    /// # Overview
+    /// Set the target interrupt to a given hart and priority
+    /// ## Arguments
+    /// * `irq` - the interrupt to set
+    /// * `hart` - the hart that will receive interrupts from this irq
+    /// * `prio` - the priority of this direct interrupt.
+    pub fn set_target_direct(&mut self, irq: u32, hart: u32, prio: u32) {
+        assert!(irq > 0 && irq < 1024);
+        self.target[irq as usize - 1] = (hart << 18) | (prio & 0xFF);
+    }
+
 
     /// # Overview
     /// Setup a source configuration to a particular mode.
@@ -132,8 +143,8 @@ impl Aplic {
     /// * `irq` the interrupt number to delegate
     /// * `child` the child to delegate this interrupt to
     pub fn sourcecfg_delegate(&mut self, irq: u32, child: u32) {
-        assert!(irq > 1 && irq < 1024);
-        self.sourcecfg[irq as usize - 1] = 1 << 10 | child;
+        assert!(irq > 0 && irq < 1024);
+        self.sourcecfg[irq as usize - 1] = 1 << 10 | child & 0x3ff;
     }
 
     /// # Overview
@@ -155,11 +166,15 @@ impl Aplic {
     /// * `irq` the interrupt number
     /// * `enabled` true: enable interrupt, false: disable interrupt
     pub fn set_ie(&mut self, irq: u32, enabled: bool) {
+        assert!(irq > 0 && irq < 1024);
+        let irqidx = irq as usize / 32;
+        let irqbit = irq as usize % 32;
         if enabled {
-            self.setienum = irq;
-        }
-        else {
-            self.clrienum = irq;
+            // self.setienum = irq;
+            self.setie[irqidx] = 1 << irqbit;
+        } else {
+            // self.clrienum = irq;
+            self.clrie[irqidx] = 1 << irqbit;
         }
     }
 
@@ -169,11 +184,15 @@ impl Aplic {
     /// * `irq` the interrupt number
     /// * `pending` true: set the bit to 1, false: clear the bit to 0
     pub fn set_ip(&mut self, irq: u32, pending: bool) {
+        assert!(irq > 0 && irq < 1024);
+        let irqidx = irq as usize / 32;
+        let irqbit = irq as usize % 32;
         if pending {
-            self.setipnum = irq;
-        }
-        else {
-            self.clripnum = irq;
+            // self.setipnum = irq;
+            self.setip[irqidx] = 1 << irqbit;
+        } else {
+            // self.clripnum = irq;
+            self.in_clrip[irqidx] = 1 << irqbit;
         }
     }
 }
@@ -222,7 +241,10 @@ pub fn aplic_init() {
     // The EIID is the value that is written to the MSI address
     // When we read TOPEI in IMSIC, it will give us the EIID if it
     // has been enabled.
-    splic.set_target(10, 0, 0, 10);
+    splic.set_target_msi(10, 0, 0, 10);
+
+    // Level high means to trigger the message delivery when the IRQ is
+    // asserted (high).
     splic.set_sourcecfg(10, SourceModes::LevelHigh);
 
     // The order is important. QEMU will not allow enabling of the IRQ
