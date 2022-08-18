@@ -222,7 +222,7 @@ impl InterruptDeliveryControl {
     /// A mutable MMIO pointer to the IDC registers
     const fn ptr(hart: usize) -> *mut Self {
         assert!(hart < 1024);
-        (APLIC_S_IDC + hart * 0x20) as *mut Self
+        (APLIC_S_IDC + hart * 32) as *mut Self
     }
 
     /// # Overview
