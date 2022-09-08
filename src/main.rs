@@ -67,7 +67,7 @@ macro_rules! csr_read {
 
 // MAX_HARTS determines how many harts can run on this OS. If a HART is not permitted to
 // run, it will be sent to park and never be able to leave, hence turning it off.
-const MAX_HARTS: usize = 4;
+const MAX_HARTS: usize = 1;
 // Trap frames are used to store the 32 general purpose registers when a hart enters a
 // trap.
 static mut TRAP_FRAMES: [[usize; 32]; MAX_HARTS] = [[0; 32]; MAX_HARTS];
@@ -89,21 +89,15 @@ fn main(hart: usize) {
         println!("Booted on hart {}.", hart);
         imsic::imsic_init();
         aplic::aplic_init();
+        page::page_init();
         console::run();
-
-        // The "test" device is at MMIO 0x10_0000. If we write 0x5555 into it, that
-        // signals QEMU to exit. It literally is the exit() call, so many cleanups
-        // are not done.
-        // Remove the following that quits QEMU. Now that we have APLIC and UART,
-        // we can talk to it.
-        // unsafe {
-            // core::ptr::write_volatile(0x10_0000 as *mut u16, 0x5555);
-        // }
     }
 }
 
 pub mod aplic;
 pub mod console;
 pub mod imsic;
+pub mod page;
+pub mod pci;
 pub mod ringbuffer;
 pub mod trap;

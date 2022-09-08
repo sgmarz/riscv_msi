@@ -2,6 +2,8 @@
 //! Stephen Marz
 //! 1 Jun 2022
 
+// These MMIO values are hard coded in the QEMU virt
+// machine.
 // M-mode APLIC
 const APLIC_M: usize = 0xc00_0000;
 // S-mode APLIC
@@ -85,7 +87,8 @@ impl Aplic {
     }
 
     /// # Overview
-    /// Set the MSI target physical address
+    /// Set the MSI target physical address. This only accepts the lower
+    /// 32-bits of an address.
     /// ## Arguments
     /// * `mode` the MSI mode (machine or supervisor)
     /// * `addr` the physical address for messages. This MUST be page aligned.
@@ -133,7 +136,7 @@ impl Aplic {
     /// * `irq` the interrupt number to set
     /// * `mode` the source mode--how the interrupt is triggered.
     pub fn set_sourcecfg(&mut self, irq: u32, mode: SourceModes) {
-        assert!(irq > 1 && irq < 1024);
+        assert!(irq > 0 && irq < 1024);
         self.sourcecfg[irq as usize - 1] = mode as u32;
     }
 
@@ -154,9 +157,11 @@ impl Aplic {
     /// * `msimode` `true`: the APLIC will send MSIs for interrupts, `false`: the APLIC will only trigger actual wires.
     /// * `enabled` `true`: this APLIC is enabled and can receive/send interrupts, `false`: the APLIC domain is disabled.
     pub fn set_domaincfg(&mut self, bigendian: bool, msimode: bool, enabled: bool) {
-        let enabled = enabled as u32;
-        let msimode = msimode as u32;
-        let bigendian = bigendian as u32;
+        // Rust library assures that converting a bool into u32 will use
+        // 1 for true and 0 for false
+        let enabled = u32::from(enabled);
+        let msimode = u32::from(msimode);
+        let bigendian = u32::from(bigendian);
         self.domaincfg = (enabled << 8) | (msimode << 2) | bigendian;
     }
 
@@ -197,6 +202,7 @@ impl Aplic {
     }
 }
 
+/// Interrupt Delivery Control is only used in 'direct' mode
 #[repr(C)]
 struct InterruptDeliveryControl {
     pub idelivery: u32,
@@ -208,20 +214,42 @@ struct InterruptDeliveryControl {
 
 #[allow(dead_code)]
 impl InterruptDeliveryControl {
+    /// # Overview
+    /// Get the IDC portion of a hart's APLIC
+    /// # Arguments
+    /// `hart` - the HART number for the IDC to get
+    /// # Returns
+    /// A mutable MMIO pointer to the IDC registers
     const fn ptr(hart: usize) -> *mut Self {
         assert!(hart < 1024);
-        (APLIC_S_IDC + hart * 0x20) as *mut Self
+        (APLIC_S_IDC + hart * 32) as *mut Self
     }
 
+    /// # Overview
+    /// Get an immutable reference to the IDC registers
+    /// # Arguments
+    /// `hart` - the HART number for the IDC to get
+    /// # Returns
+    /// An immutable reference to the IDC area
     pub fn as_ref<'a>(hart: usize) -> &'a Self {
         unsafe { Self::ptr(hart).as_ref().unwrap() }
     }
 
+    /// # Overview
+    /// Get a mutable reference to the IDC registers
+    /// # Arguments
+    /// `hart` - the HART number for the IDC to get
+    /// # Returns
+    /// A mutable reference to the IDC area
     pub fn as_mut<'a>(hart: usize) -> &'a mut Self {
         unsafe { Self::ptr(hart).as_mut().unwrap() }
     }
 }
 
+/// # Overview
+/// Intiailize the APLIC system and run a test, including
+/// setting up the APLIC to send messages to the IMSIC in
+/// supervisor mode.
 pub fn aplic_init() {
     // The root APLIC
     let mplic = Aplic::as_mut(AplicMode::Machine);
@@ -236,6 +264,8 @@ pub fn aplic_init() {
     mplic.set_msiaddr(AplicMode::Supervisor, crate::imsic::IMSIC_S);
 
     // Delegate interrupt 10 to child 0, which is APLIC_S
+    // Interrupt 10 is the UART. So, whenever the UART receives something
+    // into its receiver buffer register, it triggers an IRQ #10 to the APLIC.
     mplic.sourcecfg_delegate(10, 0);
 
     // The EIID is the value that is written to the MSI address

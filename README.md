@@ -12,7 +12,19 @@ The MSI controller has been added to the `virt` machine to QEMU. This may requir
 
 [Quick Emulator on GitHub](https://github.com/qemu)
 
+## Creating the Hard Drive for PCI test
+
+You need to create a file to attach as the "hard drive". This can be done one of several ways:
+
+`fallocate -l8M hdd.dsk`
+
+or
+
+`dd if=/dev/urandom of=hdd.dsk bs=1M count=8`
+
 # Downloading Rust Toolchain
+
+Get rust here: [rustup.rs](http://rustup.rs)
 
 Make sure the riscv32i-unknown-none-elf target is added.
 

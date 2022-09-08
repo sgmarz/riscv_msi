@@ -10,10 +10,10 @@ pub fn rust_trap() {
         match mcause & 0xFF {
             9 => imsic_handle(PrivMode::Supervisor),
             11 => imsic_handle(PrivMode::Machine),
-            _ => println!("Interrupt {}", mcause),
+            _ => println!("Unknown interrupt #{}", mcause),
         }
     } else {
         // Exception (synchronous)
-        panic!("Exception {} @ 0x{:08x}: 0x{:08x}", mcause, csr_read!("mepc"), csr_read!("mtval"));
+        panic!("Unknown exception #{} @ 0x{:08x}: 0x{:08x}", mcause, csr_read!("mepc"), csr_read!("mtval"));
     }
 }
