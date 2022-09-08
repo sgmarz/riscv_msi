@@ -1,10 +1,10 @@
 .altmacro
 .macro savegp i, stor=t6
-    sw  x\i, \i * 8(\stor)
+    sw  x\i, \i * 4(\stor)
 .endm
 
 .macro loadgp i, stor=t6
-    lw  x\i, \i * 8(\stor)
+    lw  x\i, \i * 4(\stor)
 .endm
 
 .section .text
