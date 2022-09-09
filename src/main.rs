@@ -97,6 +97,7 @@ fn main(hart: usize) {
 pub mod aplic;
 pub mod console;
 pub mod imsic;
+pub mod nvme;
 pub mod page;
 pub mod pci;
 pub mod ringbuffer;
