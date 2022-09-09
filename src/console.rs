@@ -2,6 +2,7 @@ use crate::{
     page::pages_remaining,
     pci::pci_init,
     ringbuffer::{RingBuffer, RING_BUFFER_SIZE},
+    nvme
 };
 use core::{
     arch::asm,
@@ -121,6 +122,10 @@ fn runcmd(buffer: &[u8]) {
     } else if strequals(buffer, b"pci") {
         print!("Starting PCI subsystem...");
         pci_init();
+        println!("done.");
+    } else if strequals(buffer, b"nvme") {
+        print!("Starting NVME subsystem...");
+        nvme::init();
         println!("done.");
     } else {
         println!("Command not found.");

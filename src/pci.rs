@@ -13,6 +13,8 @@ const PCI_BAR_BASE: usize = 0x4000_0000;
 const COMMAND_REG_MEM_SPACE: u16 = 1 << 1;
 const COMMAND_REG_BUS_MASTER: u16 = 1 << 2;
 
+pub static mut PCI_INITIALIZED: bool = false;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct Type0Ecam {
@@ -252,6 +254,10 @@ fn get_bar_addr(ecam: &Ecam, which: usize) -> usize {
 }
 
 pub fn pci_init() {
+    if unsafe { PCI_INITIALIZED } {
+        println!("\nPCI subsystem already initialized.");
+        return;
+    }
     for bus in 0..=4 {
         // Typically, there are 8 bits for the bus number, but not
         // all have to be implemented.
@@ -259,5 +265,8 @@ pub fn pci_init() {
         for slot in slot_start..32 {
             pci_setup(bus, slot);
         }
+    }
+    unsafe {
+        PCI_INITIALIZED = true;
     }
 }
