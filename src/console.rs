@@ -120,13 +120,9 @@ fn runcmd(buffer: &[u8]) {
         println!("  pci      - Start PCI");
         println!("  quit     - Quit");
     } else if strequals(buffer, b"pci") {
-        print!("Starting PCI subsystem...");
         pci_init();
-        println!("done.");
     } else if strequals(buffer, b"nvme") {
-        print!("Starting NVME subsystem...");
         nvme::init();
-        println!("done.");
     } else {
         println!("Command not found.");
     }

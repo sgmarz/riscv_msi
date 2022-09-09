@@ -4,11 +4,11 @@ static mut NVME_INITIALIZED: bool = false;
 
 pub fn init() {
     if unsafe { NVME_INITIALIZED } {
-        println!("\nNVMe already initialized.");
+        println!("NVMe already initialized.");
         return;
     }
     if unsafe { !PCI_INITIALIZED } {
-        println!("\nPCI has not yet been initialized.");
+        println!("PCI has not yet been initialized.");
         return;
     }
 

@@ -255,7 +255,7 @@ fn get_bar_addr(ecam: &Ecam, which: usize) -> usize {
 
 pub fn pci_init() {
     if unsafe { PCI_INITIALIZED } {
-        println!("\nPCI subsystem already initialized.");
+        println!("PCI subsystem already initialized.");
         return;
     }
     for bus in 0..=4 {
