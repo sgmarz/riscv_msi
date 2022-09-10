@@ -15,6 +15,27 @@ const COMMAND_REG_BUS_MASTER: u16 = 1 << 2;
 
 pub static mut PCI_INITIALIZED: bool = false;
 
+pub const MAX_PCI_DEVICES: usize = 4;
+pub static mut PCI_DEVICES: [Option<PciDevice>; MAX_PCI_DEVICES] = [None; MAX_PCI_DEVICES];
+
+#[derive(Clone, Copy)]
+pub enum PciDevice {
+    Nvme(usize)
+}
+
+fn pci_add_device(dev: PciDevice) {
+    unsafe {
+        for i in PCI_DEVICES.iter_mut() {
+            if i.is_none() {
+                *i = Some(dev);
+                return;
+            }
+        }
+    }
+    println!("Unable to add PCI device.");
+}
+
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct Type0Ecam {
@@ -176,6 +197,9 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
 
     ecam.command_reg = COMMAND_REG_BUS_MASTER | COMMAND_REG_MEM_SPACE;
     enum_caps(ecam);
+    if ecam.device_id == 0x0010 {
+        pci_add_device(PciDevice::Nvme(ecam as *const Ecam as usize));
+    }
 }
 
 fn pci_setup_type1(bus: usize, slot: usize, ecam: &mut Ecam) {
