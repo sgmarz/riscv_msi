@@ -198,7 +198,7 @@ fn pci_setup_type0(bus: usize, slot: usize, ecam: &mut Ecam) {
     ecam.command_reg = COMMAND_REG_BUS_MASTER | COMMAND_REG_MEM_SPACE;
     enum_caps(ecam);
     if ecam.device_id == 0x0010 {
-        pci_add_device(PciDevice::Nvme(ecam as *const Ecam as usize));
+        pci_add_device(PciDevice::Nvme(get_bar_addr(ecam, 0)));
     }
 }
 
