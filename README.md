@@ -5,6 +5,7 @@ Testing the new MSIs added by the draft Advanced Interrupt Architecture (AIA) sp
 # Blog Posts
 
 First blog post: [30-June-2022](https://blog.stephenmarz.com/2022/06/30/riscv-imsic/)
+Second blog post: [26-July-2022](https://blog.stephenmarz.com/2022/07/26/aplic/)
 
 # Quick Emulator (QEMU)
 
