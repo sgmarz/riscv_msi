@@ -1,3 +1,8 @@
+//! nvme.rs
+//! Non-volatile Memory Express routines
+//! Stephen Marz
+//! 20-Sep-2022
+
 use crate::pci::{PCI_INITIALIZED, PCI_DEVICES, PciDevice};
 
 static mut NVME_INITIALIZED: bool = false;
