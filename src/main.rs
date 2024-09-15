@@ -33,7 +33,7 @@ macro_rules! println
 fn panic(info: &core::panic::PanicInfo) -> ! {
     print!("[ABORT]: ");
     if let Some(p) = info.location() {
-        println!("line {}, file {}", p.line(), p.file());
+        println!("line {}, file {}: {}", p.line(), p.file(), info.message());
     } else {
         println!("no information available.");
     }
@@ -90,6 +90,8 @@ fn main(hart: usize) {
         imsic::imsic_init();
         aplic::aplic_init();
         page::page_init();
+        let v: Option<i32> = None;
+        v.expect("John");
         console::run();
     }
 }
