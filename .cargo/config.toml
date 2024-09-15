@@ -1,8 +1,8 @@
 [build]
-target = "riscv32i-unknown-none-elf"
+target = "riscv32imafc-unknown-none-elf"
 rustflags = ['-Clink-arg=-Tlds/virt.lds']
 
-[target.riscv32i-unknown-none-elf]
+[target.riscv32imafc-unknown-none-elf]
 runner = "./run.sh"
 
 [term]
